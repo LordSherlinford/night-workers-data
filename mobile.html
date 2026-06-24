@@ -744,115 +744,72 @@
   let selectedProvince = '广东';
   let searchQuery = '';
 
-  const GITHUB_TOKEN = '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';
-  const GITHUB_USER = 'LordSherlinford';
-  const GITHUB_REPO = 'night-workers-data';
-  const DATA_FILE = 'lightup-data.json';
-  const GITHUB_API = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${DATA_FILE}`;
-  let dataSha = null;
+  const mockProvinces = ['北京', '上海', '广东', '江苏', '浙江', '四川', '湖北', '山东', '河南', '陕西', '重庆', '湖南', '福建', '安徽', '辽宁', '黑龙江', '吉林', '甘肃', '云南', '贵州', '广西', '江西', '山西', '河北', '新疆', '内蒙古', '海南', '宁夏', '青海', '西藏', '台湾', '香港', '澳门'];
 
-  function updateLitDataFromServer(data) {
-    if (!data || !data.provinces) return;
+  function initMockData() {
     litCities = {};
-    totalLights = data.total || 0;
-    for (const [province, info] of Object.entries(data.provinces)) {
-      if (info.cities) {
-        for (const [city, count] of Object.entries(info.cities)) {
-          litCities[city] = count;
-        }
+    totalLights = 39;
+    const initialCities = {
+      '北京': 5, '上海': 4, '广州': 3, '深圳': 2, '成都': 3,
+      '杭州': 2, '南京': 2, '武汉': 2, '西安': 2, '重庆': 2,
+      '长沙': 1, '天津': 1, '苏州': 1, '青岛': 1, '郑州': 1,
+      '沈阳': 1, '哈尔滨': 1, '济南': 1, '福州': 1, '厦门': 1
+    };
+    for (const [city, count] of Object.entries(initialCities)) {
+      litCities[city] = count;
+    }
+    updateStats();
+  }
+
+  function getRandomCity() {
+    const allCities = [];
+    for (const province in cityData) {
+      for (const city of cityData[province]) {
+        allCities.push(city);
       }
     }
+    return allCities[Math.floor(Math.random() * allCities.length)];
+  }
+
+  function simulateNewLight() {
+    const city = getRandomCity();
+    litCities[city] = (litCities[city] || 0) + 1;
+    totalLights++;
+    updateStats();
     if (mapChart) {
       updateMap();
     }
-    const countEl = document.getElementById('lightCount');
-    if (countEl) countEl.textContent = totalLights;
+    console.log('[Mock] New light up:', city, 'Total:', totalLights);
+  }
+
+  function startMockSimulation() {
+    setInterval(function() {
+      if (Math.random() < 1/6) {
+        simulateNewLight();
+      }
+    }, 10000);
   }
 
   async function fetchLightUpData() {
-    try {
-      console.log('[GitHub] Fetching data...');
-      const res = await fetch(GITHUB_API, {
-        headers: {
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      });
-      if (!res.ok) throw new Error('Failed to fetch');
-      const json = await res.json();
-      dataSha = json.sha;
-      const content = atob(json.content);
-      const data = JSON.parse(content);
-      console.log('[GitHub] Data fetched:', data);
-      updateLitDataFromServer(data);
-      return true;
-    } catch (e) {
-      console.error('[GitHub] Fetch failed:', e);
-      return false;
-    }
+    return true;
   }
 
   async function sendLightUp(province, city) {
     try {
-      console.log('[LightUp] Sending:', province, city);
-      // 获取当前数据
-      let currentData = { total: 0, provinces: {} };
-      let sha = null;
-      try {
-        const res = await fetch(GITHUB_API, {
-          headers: {
-            'Authorization': `token ${GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        });
-        if (res.ok) {
-          const json = await res.json();
-          sha = json.sha;
-          const content = atob(json.content);
-          currentData = JSON.parse(content);
-        }
-      } catch (e) {
-        console.log('[LightUp] No existing data, starting fresh');
-      }
-      console.log('[LightUp] Current data:', currentData);
-      
-      // 更新数据
-      if (!currentData.provinces) currentData.provinces = {};
-      if (!currentData.provinces[province]) {
-        currentData.provinces[province] = { count: 0, cities: {} };
-      }
-      if (!currentData.provinces[province].cities) {
-        currentData.provinces[province].cities = {};
-      }
-      currentData.total = (currentData.total || 0) + 1;
-      currentData.provinces[province].count = currentData.provinces[province].count + 1;
+      console.log('[LightUp] Local light up:', province, city);
+      totalLights++;
       if (city) {
-        currentData.provinces[province].cities[city] = (currentData.provinces[province].cities[city] || 0) + 1;
+        litCities[city] = (litCities[city] || 0) + 1;
       }
-      console.log('[LightUp] New data:', currentData);
-      
-      // 保存到 GitHub
-      const newContent = JSON.stringify(currentData, null, 2);
-      const encodedContent = btoa(unescape(encodeURIComponent(newContent)));
-      const saveRes = await fetch(GITHUB_API, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `token ${GITHUB_TOKEN}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          message: 'Update light up data',
-          content: encodedContent,
-          sha: sha
-        })
-      });
-      if (!saveRes.ok) throw new Error('Failed to save');
-      const savedJson = await saveRes.json();
-      dataSha = savedJson.content.sha;
-      console.log('[LightUp] Saved successfully!');
-      
-      // 更新本地显示
-      updateLitDataFromServer(currentData);
+      updateStats();
+      if (mapChart) {
+        updateMap();
+      }
+      const btn = document.getElementById('lightBtn');
+      if (btn) {
+        btn.textContent = '✅ 点亮成功！';
+        btn.disabled = true;
+      }
       return true;
     } catch (e) {
       console.error('[LightUp] Failed:', e);
@@ -1073,14 +1030,11 @@
 
   function loadMap() {
     function setupMap() {
+      initMockData();
       initMap();
       updateStats();
-      fetchLightUpData().then(function(ok) {
-        if (ok) {
-          updateMap();
-          updateStats();
-        }
-      });
+      updateMap();
+      startMockSimulation();
     }
 
     if (typeof CHINA_MAP_DATA !== 'undefined') {
@@ -1231,11 +1185,6 @@
   window.addEventListener('load', function() {
     setTimeout(getLocation, 800);
   });
-
-  // 定时刷新数据（每5秒）
-  setInterval(function() {
-    fetchLightUpData();
-  }, 5000);
 </script>
 
 </body>
