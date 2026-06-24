@@ -774,7 +774,6 @@
       console.log('[GitHub] Fetching data...');
       const res = await fetch(GITHUB_API, {
         headers: {
-          'Authorization': `token ${GITHUB_TOKEN}`,
           'Accept': 'application/vnd.github.v3+json'
         }
       });
