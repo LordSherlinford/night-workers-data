@@ -1063,10 +1063,15 @@ body {
   justify-content: center;
   font-size: 48px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  overflow: hidden;
 }
-.qr-icon::before {
-  content: '📱';
-  font-size: 48px;
+.qr-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.qr-image {
+  display: none;
 }
 .qr-title {
   font-size: 18px;
@@ -1122,10 +1127,16 @@ body {
 .mobile-page {
   display: none;
   position: fixed;
-  inset: 0;
-  background: #0a0a12;
-  z-index: 1000;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(180deg, #0a0a12 0%, #1a1a2e 50%, #0a0a12 100%);
+  z-index: 9999;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .mobile-cover {
   min-height: 60vh;
@@ -1927,8 +1938,29 @@ body {
         <div class="qr-card">
           <div class="qr-glow"></div>
           <div class="qr-icon" id="qrIcon">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://lordsherlinford.github.io/night-workers-data/?mobile=true" alt="扫码参与点亮黑夜公益活动" style="width:100%;height:100%;border-radius:12px;"/>
-          </div>
+              <svg class="qr-placeholder" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <!-- QR Code Placeholder Pattern -->
+                <rect x="10" y="10" width="30" height="30" fill="#16233e" stroke="#ffd700" stroke-width="2"/>
+                <rect x="80" y="10" width="30" height="30" fill="#16233e" stroke="#ffd700" stroke-width="2"/>
+                <rect x="10" y="80" width="30" height="30" fill="#16233e" stroke="#ffd700" stroke-width="2"/>
+                <rect x="15" y="15" width="20" height="20" fill="#ffd700"/>
+                <rect x="85" y="15" width="20" height="20" fill="#ffd700"/>
+                <rect x="15" y="85" width="20" height="20" fill="#ffd700"/>
+                <!-- Data Pattern Dots -->
+                <circle cx="55" cy="25" r="3" fill="#00d4ff"/>
+                <circle cx="65" cy="25" r="3" fill="#00d4ff"/>
+                <circle cx="55" cy="45" r="3" fill="#00d4ff"/>
+                <circle cx="65" cy="45" r="3" fill="#e94560"/>
+                <circle cx="25" cy="55" r="3" fill="#ffd700"/>
+                <circle cx="45" cy="65" r="3" fill="#ffd700"/>
+                <circle cx="85" cy="55" r="3" fill="#00d4ff"/>
+                <circle cx="95" cy="65" r="3" fill="#e94560"/>
+                <circle cx="55" cy="85" r="3" fill="#ffd700"/>
+                <circle cx="65" cy="95" r="3" fill="#00d4ff"/>
+                <circle cx="85" cy="85" r="3" fill="#ffd700"/>
+              </svg>
+              <img class="qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://lordsherlinford.github.io/night-workers-data/?mobile=true" alt="扫码参与点亮" style="width:100%;height:100%;border-radius:12px;" onerror="this.style.display='none';this.previousElementSibling.style.display='block';"/>
+            </div>
           <div class="qr-title">扫码参与点亮</div>
           <div class="qr-desc">每一次扫码，点亮一座城</div>
           <button class="light-btn" onclick="lightUpRandomProvince()">
@@ -2039,6 +2071,7 @@ body {
 
 </div>
 
+<script src="china-map.js"></script>
 <script>
 // Check if mobile mode
 function isMobileMode() {
@@ -2052,12 +2085,37 @@ function toggleMobilePage() {
   const mainContent = document.querySelector('.content');
   
   if (isMobileMode()) {
-    mobilePage.style.display = 'block';
-    mainContent.style.display = 'none';
+    // Force mobile page to show
+    if (mobilePage) {
+      mobilePage.style.display = 'block';
+      mobilePage.style.position = 'fixed';
+      mobilePage.style.top = '0';
+      mobilePage.style.left = '0';
+      mobilePage.style.right = '0';
+      mobilePage.style.bottom = '0';
+      mobilePage.style.width = '100vw';
+      mobilePage.style.height = '100vh';
+      mobilePage.style.zIndex = '9999';
+      mobilePage.style.overflowY = 'auto';
+    }
+    
+    // Hide main content
+    if (mainContent) {
+      mainContent.style.display = 'none';
+    }
+    
     document.body.style.background = '#0a0a12';
+    document.body.style.overflow = 'hidden';
   } else {
-    mobilePage.style.display = 'none';
-    mainContent.style.display = 'block';
+    // Show main content, hide mobile page
+    if (mobilePage) {
+      mobilePage.style.display = 'none';
+    }
+    if (mainContent) {
+      mainContent.style.display = 'block';
+    }
+    document.body.style.background = '#0a0a12';
+    document.body.style.overflow = 'auto';
   }
 }
 
@@ -2964,28 +3022,44 @@ function initLightUpMap() {
   const chartDom = document.getElementById('chartLightUpMap');
   if (!chartDom) return;
 
-  // Load China map from CDN
-  fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
-    .then(function(res) { return res.json(); })
-    .then(function(geoJson) {
-      echarts.registerMap('china', geoJson);
-      
-      lightUpChart = echarts.init(chartDom);
-      updateLightUpMap();
-      
-      // Auto light up first 5 provinces for demo
-      setTimeout(function() {
-        for (let i = 0; i < 5; i++) {
-          setTimeout(function() {
-            lightUpRandomProvince();
-          }, i * 300);
-        }
-      }, 800);
-    })
-    .catch(function() {
-      // Fallback: show bar chart if map fails to load
-      showLightUpFallback(chartDom);
-    });
+  // Check if map data is already loaded locally
+  if (typeof CHINA_MAP_DATA !== 'undefined') {
+    echarts.registerMap('china', CHINA_MAP_DATA);
+    lightUpChart = echarts.init(chartDom);
+    updateLightUpMap();
+    
+    // Auto light up first 5 provinces for demo
+    setTimeout(function() {
+      for (let i = 0; i < 5; i++) {
+        setTimeout(function() {
+          lightUpRandomProvince();
+        }, i * 300);
+      }
+    }, 800);
+  } else {
+    // Fallback: load from CDN if local data not available
+    fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+      .then(function(res) { return res.json(); })
+      .then(function(geoJson) {
+        echarts.registerMap('china', geoJson);
+        
+        lightUpChart = echarts.init(chartDom);
+        updateLightUpMap();
+        
+        // Auto light up first 5 provinces for demo
+        setTimeout(function() {
+          for (let i = 0; i < 5; i++) {
+            setTimeout(function() {
+              lightUpRandomProvince();
+            }, i * 300);
+          }
+        }, 800);
+      })
+      .catch(function() {
+        // Fallback: show bar chart if map fails to load
+        showLightUpFallback(chartDom);
+      });
+  }
 
   // Resize observer
   window.addEventListener('resize', function() {
@@ -3219,7 +3293,7 @@ function animateNumber(id, target) {
 }
 
 function showLightUpFallback(container) {
-  container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#666;font-size:14px;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><div>地图加载中...</div><div style="font-size:12px;margin-top:8px;color:#888;">需要联网加载地图数据</div></div>';
+  container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#888;font-size:14px;gap:12px;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><div style="font-weight:600;color:#fff;">需要连接互联网</div><div style="font-size:12px;">地图数据需要从云端加载</div><div style="font-size:11px;margin-top:8px;">请检查网络连接后刷新页面</div></div>';
 }
 </script>
 

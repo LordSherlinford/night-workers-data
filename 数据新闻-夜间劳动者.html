@@ -1127,10 +1127,16 @@ body {
 .mobile-page {
   display: none;
   position: fixed;
-  inset: 0;
-  background: #0a0a12;
-  z-index: 1000;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(180deg, #0a0a12 0%, #1a1a2e 50%, #0a0a12 100%);
+  z-index: 9999;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .mobile-cover {
   min-height: 60vh;
@@ -2065,6 +2071,7 @@ body {
 
 </div>
 
+<script src="china-map.js"></script>
 <script>
 // Check if mobile mode
 function isMobileMode() {
@@ -2078,12 +2085,37 @@ function toggleMobilePage() {
   const mainContent = document.querySelector('.content');
   
   if (isMobileMode()) {
-    mobilePage.style.display = 'block';
-    mainContent.style.display = 'none';
+    // Force mobile page to show
+    if (mobilePage) {
+      mobilePage.style.display = 'block';
+      mobilePage.style.position = 'fixed';
+      mobilePage.style.top = '0';
+      mobilePage.style.left = '0';
+      mobilePage.style.right = '0';
+      mobilePage.style.bottom = '0';
+      mobilePage.style.width = '100vw';
+      mobilePage.style.height = '100vh';
+      mobilePage.style.zIndex = '9999';
+      mobilePage.style.overflowY = 'auto';
+    }
+    
+    // Hide main content
+    if (mainContent) {
+      mainContent.style.display = 'none';
+    }
+    
     document.body.style.background = '#0a0a12';
+    document.body.style.overflow = 'hidden';
   } else {
-    mobilePage.style.display = 'none';
-    mainContent.style.display = 'block';
+    // Show main content, hide mobile page
+    if (mobilePage) {
+      mobilePage.style.display = 'none';
+    }
+    if (mainContent) {
+      mainContent.style.display = 'block';
+    }
+    document.body.style.background = '#0a0a12';
+    document.body.style.overflow = 'auto';
   }
 }
 
@@ -2990,28 +3022,44 @@ function initLightUpMap() {
   const chartDom = document.getElementById('chartLightUpMap');
   if (!chartDom) return;
 
-  // Load China map from CDN
-  fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
-    .then(function(res) { return res.json(); })
-    .then(function(geoJson) {
-      echarts.registerMap('china', geoJson);
-      
-      lightUpChart = echarts.init(chartDom);
-      updateLightUpMap();
-      
-      // Auto light up first 5 provinces for demo
-      setTimeout(function() {
-        for (let i = 0; i < 5; i++) {
-          setTimeout(function() {
-            lightUpRandomProvince();
-          }, i * 300);
-        }
-      }, 800);
-    })
-    .catch(function() {
-      // Fallback: show bar chart if map fails to load
-      showLightUpFallback(chartDom);
-    });
+  // Check if map data is already loaded locally
+  if (typeof CHINA_MAP_DATA !== 'undefined') {
+    echarts.registerMap('china', CHINA_MAP_DATA);
+    lightUpChart = echarts.init(chartDom);
+    updateLightUpMap();
+    
+    // Auto light up first 5 provinces for demo
+    setTimeout(function() {
+      for (let i = 0; i < 5; i++) {
+        setTimeout(function() {
+          lightUpRandomProvince();
+        }, i * 300);
+      }
+    }, 800);
+  } else {
+    // Fallback: load from CDN if local data not available
+    fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+      .then(function(res) { return res.json(); })
+      .then(function(geoJson) {
+        echarts.registerMap('china', geoJson);
+        
+        lightUpChart = echarts.init(chartDom);
+        updateLightUpMap();
+        
+        // Auto light up first 5 provinces for demo
+        setTimeout(function() {
+          for (let i = 0; i < 5; i++) {
+            setTimeout(function() {
+              lightUpRandomProvince();
+            }, i * 300);
+          }
+        }, 800);
+      })
+      .catch(function() {
+        // Fallback: show bar chart if map fails to load
+        showLightUpFallback(chartDom);
+      });
+  }
 
   // Resize observer
   window.addEventListener('resize', function() {
