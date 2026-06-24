@@ -3012,7 +3012,52 @@ let lightUpChart = null;
 let litProvinces = {};
 let totalLights = 0;
 
-function initMockData() {
+const provinceNames = [
+  '北京', '天津', '上海', '重庆', '河北', '河南', '云南', '辽宁', '黑龙江', '湖南',
+  '安徽', '山东', '新疆', '江苏', '浙江', '江西', '湖北', '广西', '甘肃', '山西',
+  '内蒙古', '陕西', '吉林', '福建', '贵州', '广东', '青海', '西藏', '四川', '宁夏',
+  '海南', '台湾', '香港', '澳门'
+];
+
+const STORAGE_KEY = 'nightWorkersDataMain';
+
+function saveToStorage() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    total: totalLights,
+    provinces: litProvinces,
+    savedAt: Date.now()
+  }));
+}
+
+function loadFromStorage() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      const elapsedMs = Date.now() - data.savedAt;
+      const elapsedIntervals = Math.floor(elapsedMs / 500);
+      let extraLights = 0;
+      for (let i = 0; i < elapsedIntervals; i++) {
+        if (Math.random() < 1/150) extraLights++;
+      }
+      totalLights = data.total + extraLights;
+      litProvinces = data.provinces || {};
+      for (let i = 0; i < extraLights; i++) {
+        const province = provinceNames[Math.floor(Math.random() * provinceNames.length)];
+        litProvinces[province] = (litProvinces[province] || 0) + 1;
+      }
+      if (extraLights > 0) {
+        console.log('[Storage] Restored from storage, added ' + extraLights + ' lights during ' + Math.round(elapsedMs/1000) + 's offline');
+      }
+    } catch (e) {
+      initFrom39();
+    }
+  } else {
+    initFrom39();
+  }
+}
+
+function initFrom39() {
   totalLights = 39;
   litProvinces = {
     '北京': 5, '上海': 4, '广东': 5, '四川': 3, '浙江': 3,
@@ -3023,6 +3068,10 @@ function initMockData() {
     '内蒙古': 1, '海南': 1, '宁夏': 1, '青海': 1, '西藏': 1,
     '台湾': 1, '香港': 1, '澳门': 1
   };
+}
+
+function initMockData() {
+  loadFromStorage();
 }
 
 function getRandomProvince() {
@@ -3041,12 +3090,14 @@ function simulateNewLight() {
 }
 
 function startMockSimulation() {
-    setInterval(function() {
-      if (Math.random() < 1/150) {
-        simulateNewLight();
-      }
-    }, 500);
-  }
+  setInterval(function() {
+    if (Math.random() < 1/150) {
+      simulateNewLight();
+    }
+  }, 500);
+  setInterval(saveToStorage, 5000);
+  window.addEventListener('beforeunload', saveToStorage);
+}
 
 async function fetchLightUpData() {
   return true;
@@ -3067,13 +3118,6 @@ async function sendLightUp(province, city) {
     return false;
   }
 }
-
-const provinceNames = [
-  '北京', '天津', '上海', '重庆', '河北', '河南', '云南', '辽宁', '黑龙江', '湖南',
-  '安徽', '山东', '新疆', '江苏', '浙江', '江西', '湖北', '广西', '甘肃', '山西',
-  '内蒙古', '陕西', '吉林', '福建', '贵州', '广东', '青海', '西藏', '四川', '宁夏',
-  '海南', '台湾', '香港', '澳门'
-];
 
 function initLightUpMap() {
   const chartDom = document.getElementById('chartLightUpMap');

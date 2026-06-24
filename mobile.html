@@ -746,7 +746,46 @@
 
   const mockProvinces = ['北京', '上海', '广东', '江苏', '浙江', '四川', '湖北', '山东', '河南', '陕西', '重庆', '湖南', '福建', '安徽', '辽宁', '黑龙江', '吉林', '甘肃', '云南', '贵州', '广西', '江西', '山西', '河北', '新疆', '内蒙古', '海南', '宁夏', '青海', '西藏', '台湾', '香港', '澳门'];
 
-  function initMockData() {
+  const STORAGE_KEY = 'nightWorkersData';
+  const BASE_TIME = Date.now();
+
+  function saveToStorage() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      total: totalLights,
+      cities: litCities,
+      savedAt: Date.now()
+    }));
+  }
+
+  function loadFromStorage() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        const elapsedMs = Date.now() - data.savedAt;
+        const elapsedIntervals = Math.floor(elapsedMs / 500);
+        let extraLights = 0;
+        for (let i = 0; i < elapsedIntervals; i++) {
+          if (Math.random() < 1/150) extraLights++;
+        }
+        totalLights = data.total + extraLights;
+        litCities = data.cities || {};
+        for (let i = 0; i < extraLights; i++) {
+          const city = getRandomCity();
+          litCities[city] = (litCities[city] || 0) + 1;
+        }
+        if (extraLights > 0) {
+          console.log('[Storage] Restored from storage, added ' + extraLights + ' lights during ' + Math.round(elapsedMs/1000) + 's offline');
+        }
+      } catch (e) {
+        initFrom39();
+      }
+    } else {
+      initFrom39();
+    }
+  }
+
+  function initFrom39() {
     litCities = {};
     totalLights = 39;
     const initialCities = {
@@ -758,6 +797,10 @@
     for (const [city, count] of Object.entries(initialCities)) {
       litCities[city] = count;
     }
+  }
+
+  function initMockData() {
+    loadFromStorage();
     updateStats();
   }
 
@@ -788,6 +831,8 @@
         simulateNewLight();
       }
     }, 500);
+    setInterval(saveToStorage, 5000);
+    window.addEventListener('beforeunload', saveToStorage);
   }
 
   async function fetchLightUpData() {
