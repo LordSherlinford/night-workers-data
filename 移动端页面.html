@@ -644,6 +644,43 @@
   const DOC_ID = 'global';
   let cloudbaseApp = null;
   let cloudbaseDb = null;
+  let lightUpWatcher = null;
+
+  function updateLitDataFromServer(data) {
+    if (!data || !data.provinces) return;
+    litCities = {};
+    totalLights = data.total || 0;
+    for (const [province, info] of Object.entries(data.provinces)) {
+      if (info.cities) {
+        for (const [city, count] of Object.entries(info.cities)) {
+          litCities[city] = count;
+        }
+      }
+    }
+    if (mapChart) {
+      updateMap();
+    }
+    const countEl = document.getElementById('lightCount');
+    if (countEl) countEl.textContent = totalLights;
+  }
+
+  async function startLightUpWatch() {
+    if (lightUpWatcher) return;
+    try {
+      lightUpWatcher = cloudbaseDb.collection(COLLECTION).where({ _id: DOC_ID }).watch({
+        onChange: (snapshot) => {
+          if (snapshot.docs && snapshot.docs.length > 0) {
+            updateLitDataFromServer(snapshot.docs[0]);
+          }
+        },
+        onError: (err) => {
+          console.warn('Light up watch error:', err);
+        }
+      });
+    } catch (e) {
+      console.warn('Failed to start watch:', e);
+    }
+  }
 
   async function initCloudBase() {
     if (cloudbaseDb) return true;
@@ -652,6 +689,7 @@
       const auth = cloudbaseApp.auth({ persistence: 'local' });
       await auth.signInAnonymously();
       cloudbaseDb = cloudbaseApp.database();
+      startLightUpWatch();
       return true;
     } catch (e) {
       console.warn('CloudBase init failed:', e);

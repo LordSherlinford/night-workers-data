@@ -3014,9 +3014,41 @@ let litProvinces = {};
 let totalLights = 0;
 let cloudbaseApp = null;
 let cloudbaseDb = null;
+let lightUpWatcher = null;
 const CLOUDBASE_ENV = 'night-d3gwx140h359d9590';
 const COLLECTION = 'lightup_data';
 const DOC_ID = 'global';
+
+function updateLitDataFromServer(data) {
+  if (!data || !data.provinces) return;
+  litProvinces = {};
+  for (const [province, info] of Object.entries(data.provinces)) {
+    litProvinces[province] = info.count || 0;
+  }
+  totalLights = data.total || 0;
+  if (lightUpChart) {
+    updateLightUpMap();
+    updateLightStats();
+  }
+}
+
+async function startLightUpWatch() {
+  if (lightUpWatcher) return;
+  try {
+    lightUpWatcher = cloudbaseDb.collection(COLLECTION).where({ _id: DOC_ID }).watch({
+      onChange: (snapshot) => {
+        if (snapshot.docs && snapshot.docs.length > 0) {
+          updateLitDataFromServer(snapshot.docs[0]);
+        }
+      },
+      onError: (err) => {
+        console.warn('Light up watch error:', err);
+      }
+    });
+  } catch (e) {
+    console.warn('Failed to start watch:', e);
+  }
+}
 
 async function initCloudBase() {
   if (cloudbaseDb) return true;
@@ -3025,6 +3057,7 @@ async function initCloudBase() {
     const auth = cloudbaseApp.auth({ persistence: 'local' });
     await auth.signInAnonymously();
     cloudbaseDb = cloudbaseApp.database();
+    startLightUpWatch();
     return true;
   } catch (e) {
     console.warn('CloudBase init failed:', e);
