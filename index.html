@@ -1,16 +1,3234 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>数据新闻文件展示</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>城市不平，穿梭平安 — 中国城市夜间劳动者全景调查</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0a0a12;
+  color: #e0e0e0;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  body {
+    background: linear-gradient(180deg, #0a0a12 0%, #1a1a2e 50%, #0a0a12 100%);
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #0a0a12; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #e94560, #c73e54);
+  border-radius: 4px;
+}
+::selection { background: rgba(233, 69, 96, 0.3); color: #fff; }
+
+/* Scroll Progress */
+.scroll-progress {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 3px; z-index: 9999;
+  background: transparent;
+}
+.scroll-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #e94560, #ffd700, #00d4ff);
+  transition: width 0.1s ease-out;
+}
+
+/* Side Nav */
+.side-nav {
+  position: fixed; right: 24px; top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  display: none;
+}
+@media (min-width: 1024px) { .side-nav { display: block; } }
+.side-nav ul { list-style: none; }
+.side-nav li { margin: 16px 0; }
+.side-nav a {
+  display: flex; align-items: center; gap: 12px;
+  text-decoration: none; color: #666;
+  font-size: 12px; cursor: pointer;
+  transition: all 0.3s;
+}
+.side-nav a:hover { color: #ccc; }
+.side-nav a:hover .nav-dot { border-color: rgba(233, 69, 96, 0.5); }
+.side-nav a.active { color: #fff; }
+.side-nav a.active .nav-dot {
+  background: #e94560;
+  border-color: #e94560;
+  transform: scale(1.25);
+  box-shadow: 0 0 12px rgba(233, 69, 96, 0.5);
+}
+.nav-dot {
+  width: 12px; height: 12px;
+  border: 2px solid #444;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+.nav-label {
+  opacity: 0; transform: translateX(8px);
+  transition: all 0.3s;
+}
+.side-nav a:hover .nav-label { opacity: 1; transform: translateX(0); }
+.side-nav a.active .nav-label { opacity: 1; transform: translateX(0); }
+
+/* Background Decor */
+.bg-decor {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  overflow: hidden;
+}
+.bg-blob { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.12; }
+.bg-blob-1 { width: 500px; height: 500px; background: #e94560; top: 10%; left: -10%; animation: pulse1 8s ease-in-out infinite; }
+.bg-blob-2 { width: 500px; height: 500px; background: #00d4ff; bottom: 20%; right: -10%; animation: pulse2 10s ease-in-out infinite; }
+.bg-blob-3 { width: 700px; height: 700px; background: #ffd700; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.04; }
+.bg-blob-4 { width: 300px; height: 300px; background: #9966ff; top: 30%; left: 30%; animation: pulse3 12s ease-in-out infinite; }
+@keyframes pulse1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(30px, -20px); } }
+@keyframes pulse2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-40px, 30px); } }
+@keyframes pulse3 { 0%,100% { transform: translate(0,0); opacity: 0.08; } 50% { transform: translate(20px, -30px); opacity: 0.12; } }
+
+.bg-grid {
+  position: absolute; inset: 0;
+  opacity: 0.02;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Content */
+.content { position: relative; z-index: 10; }
+
+/* Hero Section */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  text-align: center;
+  padding: 0 24px;
+  overflow: hidden;
+}
+.hero-shapes { position: absolute; inset: 0; overflow: hidden; }
+.shape {
+  position: absolute;
+  animation: float 6s ease-in-out infinite;
+}
+.shape-circle {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(233, 69, 96, 0.3);
+  border-radius: 50%;
+}
+.shape-square {
+  width: 24px; height: 24px;
+  border: 2px solid rgba(0, 212, 255, 0.3);
+  transform: rotate(45deg);
+}
+.shape-dot {
+  width: 8px; height: 8px;
+  background: rgba(255, 215, 0, 0.4);
+  border-radius: 50%;
+}
+.shape-1 { top: 10%; left: 10%; animation-delay: 0s; }
+.shape-2 { top: 18%; right: 15%; animation-delay: 1s; }
+.shape-3 { bottom: 30%; left: 20%; animation-delay: 2s; }
+.shape-4 { top: 45%; right: 10%; animation-delay: 0.5s; }
+.shape-5 { bottom: 15%; right: 25%; animation-delay: 3s; }
+.shape-6 { top: 25%; left: 5%; animation-delay: 1.5s; }
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+.hero-particles { position: absolute; inset: 0; }
+.particle {
+  position: absolute;
+  width: 3px; height: 3px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 50%;
+  animation: float 5s ease-in-out infinite;
+}
+
+.hero-line {
+  position: absolute; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(233, 69, 96, 0.2), transparent);
+}
+.hero-line-1 { top: 30%; }
+.hero-line-2 { top: 70%; background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.2), transparent); }
+
+.hero-content {
+  position: relative; z-index: 5;
+  max-width: 900px;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(90deg, rgba(233, 69, 96, 0.15), rgba(0, 212, 255, 0.15));
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 999px;
+  margin-bottom: 40px;
+  opacity: 0; transform: translateY(20px);
+  animation: fadeInUp 0.7s ease-out 0.2s forwards;
+}
+.hero-badge svg { width: 16px; height: 16px; color: #ffd700; }
+.hero-badge span {
+  font-size: 14px; color: #e94560;
+  font-weight: 500; letter-spacing: 1px;
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  font-weight: 900;
+  line-height: 1.15;
+  margin-bottom: 32px;
+  opacity: 0; transform: translateY(30px);
+  animation: fadeInUp 0.8s ease-out 0.4s forwards;
+}
+.hero-title .gradient {
+  background: linear-gradient(135deg, #e94560, #ffd700, #00d4ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-title .white { color: #fff; }
+
+.hero-desc {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  color: #b0b0b0;
+  max-width: 800px;
+  margin: 0 auto 56px;
+  line-height: 1.8;
+  opacity: 0; transform: translateY(20px);
+  animation: fadeInUp 0.8s ease-out 0.6s forwards;
+}
+
+.hero-stats {
+  display: flex; flex-wrap: wrap;
+  justify-content: center; gap: 32px;
+  margin-bottom: 56px;
+  opacity: 0; transform: translateY(20px);
+  animation: fadeInUp 0.8s ease-out 0.8s forwards;
+}
+.hero-stat { text-align: center; }
+.hero-stat-value {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 700;
+  margin-bottom: 4px;
+  transition: transform 0.3s;
+}
+.hero-stat:hover .hero-stat-value { transform: scale(1.1); }
+.hero-stat-value.red { color: #e94560; }
+.hero-stat-value.blue { color: #00d4ff; }
+.hero-stat-value.gold { color: #ffd700; }
+.hero-stat-unit { font-size: 1.2rem; font-weight: 600; }
+.hero-stat-label {
+  font-size: 13px; color: #777;
+  margin-top: 6px;
+  position: relative;
+}
+.hero-stat-label::after {
+  content: '';
+  position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%);
+  width: 48px; height: 2px;
+  background: linear-gradient(90deg, currentColor, transparent);
+  opacity: 0.5;
+}
+.hero-divider {
+  width: 1px; height: 60px;
+  background: linear-gradient(180deg, transparent, #555, transparent);
+  display: none;
+}
+@media (min-width: 768px) { .hero-divider { display: block; } }
+
+.hero-btn {
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 16px 32px;
+  background: linear-gradient(135deg, #e94560, #c73e54);
+  color: #fff;
+  font-size: 16px; font-weight: 500;
+  border: none; border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.3s;
+  opacity: 0; transform: translateY(20px);
+  animation: fadeInUp 0.8s ease-out 1s forwards;
+}
+.hero-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 20px 40px rgba(233, 69, 96, 0.4);
+}
+.hero-btn svg {
+  width: 20px; height: 20px;
+  animation: bounce 2s infinite;
+}
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+.hero-scroll-hint {
+  position: absolute; bottom: 40px; left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  opacity: 0;
+  animation: fadeIn 0.8s ease-out 1.2s forwards;
+}
+.hero-scroll-hint span {
+  font-size: 11px; color: #666;
+  letter-spacing: 2px; text-transform: uppercase;
+  display: block; margin-bottom: 12px;
+}
+.scroll-mouse {
+  width: 24px; height: 40px;
+  border: 2px solid #555;
+  border-radius: 12px;
+  margin: 0 auto;
+  position: relative;
+}
+.scroll-mouse::after {
+  content: '';
+  position: absolute; top: 8px; left: 50%;
+  transform: translateX(-50%);
+  width: 6px; height: 10px;
+  background: #e94560;
+  border-radius: 3px;
+  animation: scrollDot 2s ease-in-out infinite;
+}
+@keyframes scrollDot {
+  0%, 100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+  50% { transform: translateX(-50%) translateY(12px); opacity: 0.3; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Section */
+.section {
+  padding: 120px 24px;
+  position: relative;
+}
+.section-divider {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(233, 69, 96, 0.2), transparent);
+}
+.section-divider.blue {
+  background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.2), transparent);
+}
+.section-divider.gold {
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.2), transparent);
+}
+.section-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Section Title */
+.section-title {
+  text-align: center;
+  margin-bottom: 64px;
+  opacity: 0; transform: translateY(30px);
+  transition: all 0.7s ease-out;
+}
+.section-title.visible { opacity: 1; transform: translateY(0); }
+.st-chapter-wrap {
+  display: inline-flex; align-items: center; gap: 12px;
+  margin-bottom: 20px;
+}
+.st-line {
+  width: 32px; height: 1px;
+  background: linear-gradient(90deg, transparent, #e94560);
+}
+.st-line.right { background: linear-gradient(90deg, #00d4ff, transparent); }
+.st-chapter {
+  padding: 6px 16px;
+  background: linear-gradient(90deg, rgba(233, 69, 96, 0.15), rgba(0, 212, 255, 0.15));
+  border: 1px solid rgba(233, 69, 96, 0.25);
+  border-radius: 999px;
+  font-size: 14px; color: #e94560;
+  font-weight: 500; letter-spacing: 1px;
+}
+.section-title h2 {
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 20px;
+  line-height: 1.3;
+}
+.section-title p {
+  font-size: clamp(0.95rem, 1.5vw, 1.125rem);
+  color: #888;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.8;
+}
+.st-decor {
+  display: flex; align-items: center; gap: 8px;
+  justify-content: center;
+  margin-top: 32px;
+}
+.st-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 16px currentColor;
+}
+.st-dot.red { background: #e94560; color: #e94560; }
+.st-dot.blue { background: #00d4ff; color: #00d4ff; }
+.st-bar {
+  width: 64px; height: 2px;
+  background: linear-gradient(90deg, #e94560, #ffd700, #00d4ff);
+  border-radius: 2px;
+}
+
+/* Stat Cards */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 24px;
+  margin-bottom: 64px;
+}
+@media (min-width: 768px) {
+  .stat-cards-3 { grid-template-columns: repeat(3, 1fr); }
+  .stat-cards-4 { grid-template-columns: repeat(4, 1fr); }
+}
+.stat-card {
+  position: relative;
+  padding: 32px;
+  background: rgba(22, 33, 62, 0.4);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(233, 69, 96, 0.15);
+  border-radius: 16px;
+  overflow: hidden;
+  opacity: 0; transform: translateY(30px);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.stat-card.visible { opacity: 1; transform: translateY(0); }
+.stat-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 25px 50px rgba(233, 69, 96, 0.15);
+}
+.stat-card.blue { border-color: rgba(0, 212, 255, 0.15); }
+.stat-card.blue:hover { box-shadow: 0 25px 50px rgba(0, 212, 255, 0.15); }
+.stat-card.gold { border-color: rgba(255, 215, 0, 0.15); }
+.stat-card.gold:hover { box-shadow: 0 25px 50px rgba(255, 215, 0, 0.15); }
+.stat-card.purple { border-color: rgba(153, 102, 255, 0.15); }
+.stat-card.purple:hover { box-shadow: 0 25px 50px rgba(153, 102, 255, 0.15); }
+
+.sc-top-bar {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  opacity: 0.5;
+}
+.stat-card .sc-top-bar { background: linear-gradient(90deg, #e94560, #ff6b8a); }
+.stat-card.blue .sc-top-bar { background: linear-gradient(90deg, #00d4ff, #66e0ff); }
+.stat-card.gold .sc-top-bar { background: linear-gradient(90deg, #ffd700, #ffed4e); }
+.stat-card.purple .sc-top-bar { background: linear-gradient(90deg, #9966ff, #c299ff); }
+
+.sc-corner {
+  position: absolute;
+  width: 24px; height: 24px;
+}
+.sc-corner.tl { top: 0; left: 0; border-top: 2px solid; border-left: 2px solid; border-radius: 16px 0 0 0; border-color: rgba(233, 69, 96, 0.2); }
+.sc-corner.br { bottom: 0; right: 0; border-bottom: 2px solid; border-right: 2px solid; border-radius: 0 0 16px 0; border-color: rgba(233, 69, 96, 0.2); }
+.stat-card.blue .sc-corner { border-color: rgba(0, 212, 255, 0.2) !important; }
+.stat-card.gold .sc-corner { border-color: rgba(255, 215, 0, 0.2) !important; }
+.stat-card.purple .sc-corner { border-color: rgba(153, 102, 255, 0.2) !important; }
+
+.sc-glow {
+  position: absolute; top: -20px; right: -20px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  filter: blur(30px);
+  opacity: 0.1;
+  transition: opacity 0.5s;
+}
+.stat-card:hover .sc-glow { opacity: 0.2; }
+.stat-card .sc-glow { background: #e94560; }
+.stat-card.blue .sc-glow { background: #00d4ff; }
+.stat-card.gold .sc-glow { background: #ffd700; }
+.stat-card.purple .sc-glow { background: #9966ff; }
+
+.sc-value {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -1px;
+}
+.stat-card .sc-value { color: #e94560; }
+.stat-card.blue .sc-value { color: #00d4ff; }
+.stat-card.gold .sc-value { color: #ffd700; }
+.stat-card.purple .sc-value { color: #9966ff; }
+.sc-unit { font-size: 1.2rem; font-weight: 600; opacity: 0.9; margin-left: 4px; }
+.sc-label { font-size: 14px; color: #999; font-weight: 500; }
+.sc-bar {
+  margin-top: 16px;
+  height: 2px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.sc-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  width: 0;
+  transition: width 1s ease-out;
+}
+.stat-card .sc-bar-fill { background: linear-gradient(90deg, #e94560, #ff6b8a); }
+.stat-card.blue .sc-bar-fill { background: linear-gradient(90deg, #00d4ff, #66e0ff); }
+.stat-card.gold .sc-bar-fill { background: linear-gradient(90deg, #ffd700, #ffed4e); }
+.stat-card.purple .sc-bar-fill { background: linear-gradient(90deg, #9966ff, #c299ff); }
+.stat-card.visible .sc-bar-fill { width: 75%; }
+
+/* Chart Container */
+.chart-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  margin-bottom: 64px;
+}
+@media (min-width: 1024px) { .chart-grid-2 { grid-template-columns: 1fr 1fr; } }
+
+.chart-container {
+  background: rgba(22, 33, 62, 0.4);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(233, 69, 96, 0.1);
+  border-radius: 16px;
+  padding: 28px;
+  opacity: 0; transform: translateY(30px);
+  transition: all 0.7s ease-out;
+}
+.chart-container.visible { opacity: 1; transform: translateY(0); }
+.chart-container.blue { border-color: rgba(0, 212, 255, 0.1); }
+.chart-container.gold { border-color: rgba(255, 215, 0, 0.1); }
+.chart-container h3 {
+  font-size: 17px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 20px;
+}
+.chart-box { width: 100%; height: 350px; }
+.chart-box-tall { width: 100%; height: 420px; }
+.chart-box-short { width: 100%; height: 300px; }
+
+.chart-center {
+  max-width: 700px;
+  margin: 0 auto 64px;
+}
+
+/* Text Block */
+.text-block {
+  max-width: 800px;
+  margin: 0 auto 48px;
+  text-align: center;
+  font-size: clamp(0.95rem, 1.5vw, 1.125rem);
+  color: #888;
+  line-height: 2;
+}
+.text-block strong {
+  color: #e94560;
+  font-weight: 600;
+}
+.text-block .gold { color: #ffd700; }
+.text-block .blue { color: #00d4ff; }
+
+/* Info Card */
+.info-card {
+  background: rgba(22, 33, 62, 0.4);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 215, 0, 0.15);
+  border-radius: 16px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.info-card-glow {
+  position: absolute; top: -30px; right: -30px;
+  width: 100px; height: 100px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), transparent);
+  border-radius: 50%;
+  filter: blur(30px);
+}
+.info-card h3 {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 20px; font-weight: 700; color: #fff;
+  margin-bottom: 24px;
+}
+.info-card h3::before {
+  content: '';
+  width: 4px; height: 28px;
+  background: linear-gradient(180deg, #ffd700, #ff8c00);
+  border-radius: 2px;
+}
+.info-big-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 16px;
+}
+.info-row {
+  display: flex; justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 14px;
+}
+.info-row:last-of-type { border-bottom: none; }
+.info-row .label { color: #888; }
+.info-row .value { color: #fff; font-weight: 500; }
+.info-text {
+  font-size: 14px;
+  color: #888;
+  line-height: 1.8;
+  margin-top: 16px;
+}
+.salary-compare {
+  padding: 16px 0;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  margin-top: 16px;
+}
+.salary-compare-label {
+  font-size: 13px; color: #888;
+  margin-bottom: 12px;
+}
+.salary-compare-values {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; margin-bottom: 10px;
+}
+.salary-compare-values .high { color: #00cc99; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.salary-compare-values .low { color: #e94560; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot.green { background: #00cc99; }
+.dot.red { background: #e94560; }
+.salary-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.salary-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00cc99, #ffd700, #e94560);
+  border-radius: 4px;
+}
+
+/* Conclusion */
+.conclusion {
+  padding: 140px 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.conclusion-glow {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 900px; height: 900px;
+  background: radial-gradient(circle, rgba(233, 69, 96, 0.1), transparent 70%);
+  animation: pulse1 8s ease-in-out infinite;
+}
+.conclusion-circles {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+.conc-circle {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid;
+}
+.conc-circle-1 { width: 500px; height: 500px; border-color: rgba(233, 69, 96, 0.08); }
+.conc-circle-2 { width: 700px; height: 700px; border-color: rgba(255, 215, 0, 0.05); }
+
+.conclusion-inner {
+  position: relative; z-index: 5;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.conc-top-decor {
+  display: flex; align-items: center; gap: 16px;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+.conc-line {
+  width: 64px; height: 1px;
+}
+.conc-line.left { background: linear-gradient(90deg, transparent, #e94560); }
+.conc-line.right { background: linear-gradient(90deg, #00d4ff, transparent); }
+.conc-icon { color: #ffd700; width: 20px; height: 20px; }
+
+.conc-badge {
+  display: inline-block;
+  padding: 10px 24px;
+  background: linear-gradient(90deg, rgba(233, 69, 96, 0.15), rgba(255, 215, 0, 0.15));
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 999px;
+  font-size: 14px; color: #ffd700;
+  font-weight: 500; letter-spacing: 2px;
+  margin-bottom: 32px;
+}
+
+.conc-title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+  margin-bottom: 32px;
+}
+.conc-title .gradient {
+  background: linear-gradient(135deg, #e94560, #ffd700, #00d4ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.conc-desc {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  color: #888;
+  max-width: 700px;
+  margin: 0 auto 80px;
+  line-height: 2;
+}
+
+.conc-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-bottom: 80px;
+}
+@media (min-width: 768px) { .conc-cards { grid-template-columns: repeat(3, 1fr); } }
+
+.conc-card {
+  background: rgba(22, 33, 62, 0.4);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(233, 69, 96, 0.15);
+  border-radius: 16px;
+  padding: 40px 28px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.5s;
+}
+.conc-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 30px 60px rgba(233, 69, 96, 0.1);
+}
+.conc-card.blue { border-color: rgba(0, 212, 255, 0.15); }
+.conc-card.blue:hover { box-shadow: 0 30px 60px rgba(0, 212, 255, 0.1); }
+.conc-card.gold { border-color: rgba(255, 215, 0, 0.15); }
+.conc-card.gold:hover { box-shadow: 0 30px 60px rgba(255, 215, 0, 0.1); }
+
+.conc-card-glow {
+  position: absolute; top: -30px; right: -30px;
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  filter: blur(30px);
+  opacity: 0.1;
+  transition: opacity 0.5s;
+}
+.conc-card:hover .conc-card-glow { opacity: 0.2; }
+.conc-card .conc-card-glow { background: #e94560; }
+.conc-card.blue .conc-card-glow { background: #00d4ff; }
+.conc-card.gold .conc-card-glow { background: #ffd700; }
+
+.conc-icon-box {
+  width: 64px; height: 64px;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 24px;
+  background: linear-gradient(135deg, rgba(233, 69, 96, 0.15), rgba(199, 62, 84, 0.05));
+  transition: transform 0.5s;
+}
+.conc-card:hover .conc-icon-box { transform: scale(1.1); }
+.conc-card.blue .conc-icon-box {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 168, 204, 0.05));
+}
+.conc-card.gold .conc-icon-box {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 183, 0, 0.05));
+}
+.conc-icon-box svg {
+  width: 32px; height: 32px;
+}
+.conc-card h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 12px;
+}
+.conc-card p {
+  font-size: 14px;
+  color: #888;
+  line-height: 1.8;
+}
+
+.conc-final {
+  position: relative;
+  display: inline-block;
+}
+.conc-final-glow {
+  position: absolute; inset: -20px;
+  background: linear-gradient(90deg, rgba(233, 69, 96, 0.15), rgba(255, 215, 0, 0.15), rgba(0, 212, 255, 0.15));
+  border-radius: 999px;
+  filter: blur(20px);
+}
+.conc-final-text {
+  position: relative;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 32px;
+}
+.conc-heart-row {
+  display: flex; align-items: center; gap: 16px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.conc-heart-line {
+  width: 80px; height: 1px;
+}
+.conc-heart-line.left { background: linear-gradient(90deg, transparent, rgba(233, 69, 96, 0.5)); }
+.conc-heart-line.right { background: linear-gradient(90deg, rgba(0, 212, 255, 0.5), transparent); }
+.conc-heart {
+  width: 16px; height: 16px;
+  color: #e94560;
+  animation: heartBeat 2s ease-in-out infinite;
+}
+@keyframes heartBeat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.15); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.15); }
+}
+.conc-source {
+  font-size: 13px; color: #666;
+}
+
+/* Section reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Cursor Glow */
+.cursor-glow {
+  position: fixed;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(233, 69, 96, 0.15) 0%, rgba(0, 212, 255, 0.08) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  filter: blur(40px);
+  transition: opacity 0.3s;
+}
+@media (max-width: 768px) {
+  .cursor-glow { display: none; }
+}
+
+/* Back to Top */
+.back-to-top {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e94560, #c73e54);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(233, 69, 96, 0.4);
+}
+.back-to-top:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 25px rgba(233, 69, 96, 0.6);
+}
+.back-to-top.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (max-width: 768px) {
+  .back-to-top {
+    width: 42px;
+    height: 42px;
+    bottom: 20px;
+    right: 20px;
+  }
+}
+
+/* Chart Header & Toggle */
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.chart-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.chart-toggle {
+  display: flex;
+  gap: 4px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 4px;
+}
+.toggle-btn {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  color: #888;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.3s;
+  font-family: inherit;
+}
+.toggle-btn:hover {
+  color: #ccc;
+  background: rgba(255,255,255,0.05);
+}
+.toggle-btn.active {
+  background: linear-gradient(135deg, #e94560, #c73e54);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(233, 69, 96, 0.3);
+}
+@media (max-width: 640px) {
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .toggle-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+/* Light Up Section */
+.light-up-section {
+  padding: 120px 24px;
+  position: relative;
+  background: linear-gradient(180deg, rgba(10,10,18,0) 0%, rgba(233, 69, 96, 0.05) 50%, rgba(10,10,18,0) 100%);
+}
+.light-up-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  align-items: start;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+@media (min-width: 1024px) {
+  .light-up-container {
+    grid-template-columns: 1.5fr 1fr;
+  }
+}
+.light-up-map {
+  background: linear-gradient(135deg, rgba(22,33,62,0.6), rgba(22,33,62,0.3));
+  border: 1px solid rgba(255,215,0,0.1);
+  border-radius: 16px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.light-up-map::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ffd700, transparent);
+  opacity: 0.5;
+}
+
+/* Light Up Side */
+.light-up-side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.light-up-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.lu-stat {
+  background: linear-gradient(135deg, rgba(22,33,62,0.8), rgba(22,33,62,0.4));
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 20px 16px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.lu-stat::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #e94560, transparent);
+  opacity: 0.6;
+}
+.lu-stat:nth-child(2)::before {
+  background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+}
+.lu-stat-value {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.lu-stat-value.gold {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.lu-stat-value.blue {
+  background: linear-gradient(135deg, #00d4ff, #0099cc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.lu-stat-unit {
+  font-size: 14px;
+  margin-left: 2px;
+}
+.lu-stat-label {
+  font-size: 13px;
+  color: #888;
+}
+
+/* QR Card */
+.qr-card {
+  background: linear-gradient(135deg, rgba(22,33,62,0.9), rgba(22,33,62,0.5));
+  border: 1px solid rgba(233, 69, 96, 0.15);
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.qr-glow {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(233, 69, 96, 0.2) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: qrPulse 3s ease-in-out infinite;
+}
+@keyframes qrPulse {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+}
+.qr-icon {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 16px;
+  background: #fff;
+  border-radius: 12px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.qr-icon::before {
+  content: '📱';
+  font-size: 48px;
+}
+.qr-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+  position: relative;
+}
+.qr-desc {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 20px;
+  position: relative;
+}
+.light-btn {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #e94560, #c73e54);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+  font-family: inherit;
+  box-shadow: 0 4px 20px rgba(233, 69, 96, 0.3);
+}
+.light-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 30px rgba(233, 69, 96, 0.5);
+}
+.light-btn:active {
+  transform: translateY(0);
+}
+.light-btn-icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+.light-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #888;
+  font-size: 14px;
+  padding-top: 16px;
+}
+
+/* Mobile Page Styles */
+.mobile-page {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #0a0a12;
+  z-index: 1000;
+  overflow-y: auto;
+}
+.mobile-cover {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 40px 24px;
+}
+.mobile-cover-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(233, 69, 96, 0.15) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+              radial-gradient(ellipse at 20% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 50%);
+}
+.mobile-cover-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+.mobile-logo {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(233, 69, 96, 0.1));
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  border-radius: 50%;
+  animation: logoPulse 3s ease-in-out infinite;
+}
+@keyframes logoPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.5); }
+}
+.mobile-title {
+  font-size: 42px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ffd700, #e94560);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+.mobile-subtitle {
+  font-size: 16px;
+  color: #888;
+  margin-bottom: 32px;
+}
+.mobile-stats-preview {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+}
+.mobile-stat {
+  text-align: center;
+}
+.mobile-stat-value {
+  font-size: 36px;
+  font-weight: 900;
+  color: #fff;
+  display: block;
+}
+.mobile-stat-label {
+  font-size: 13px;
+  color: #888;
+}
+
+.mobile-content {
+  padding: 24px;
+  padding-bottom: 48px;
+}
+.mobile-section {
+  margin-bottom: 24px;
+}
+
+.location-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(22, 33, 62, 0.8), rgba(22, 33, 62, 0.4));
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 16px;
+  padding: 20px;
+}
+.loc-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 212, 255, 0.1);
+  border-radius: 12px;
+}
+.loc-content {
+  flex: 1;
+}
+.loc-title {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 4px;
+}
+.loc-desc {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+.loc-btn {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #00d4ff, #0099cc);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.loc-btn:active {
+  transform: scale(0.95);
+}
+
+.action-btn {
+  width: 100%;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(233, 69, 96, 0.3), rgba(233, 69, 96, 0.1));
+  border: 2px solid rgba(233, 69, 96, 0.3);
+  border-radius: 16px;
+  color: #888;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: not-allowed;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.action-btn.active {
+  background: linear-gradient(135deg, #e94560, #c73e54);
+  border-color: #e94560;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(233, 69, 96, 0.3);
+}
+.action-btn.active:hover,
+.action-btn.active:active {
+  transform: scale(0.98);
+}
+.action-btn.success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: #10b981;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+}
+.action-icon {
+  font-size: 20px;
+}
+
+.mini-map-container {
+  background: linear-gradient(135deg, rgba(22, 33, 62, 0.8), rgba(22, 33, 62, 0.4));
+  border: 1px solid rgba(255, 215, 0, 0.1);
+  border-radius: 16px;
+  padding: 20px;
+}
+.mini-map-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #fff;
+}
+.mini-map {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.mini-map-dot {
+  width: var(--size, 6px);
+  height: var(--size, 6px);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+.mini-map-dot.lit {
+  background: linear-gradient(135deg, #ffd700, #e94560);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+}
+.mini-map-legend {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 16px;
+  font-size: 12px;
+  color: #888;
+}
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.legend-dot.lit {
+  background: linear-gradient(135deg, #ffd700, #e94560);
+}
+.legend-dot.unlit {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.story-card {
+  display: flex;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(233, 69, 96, 0.1), rgba(233, 69, 96, 0.05));
+  border: 1px solid rgba(233, 69, 96, 0.1);
+  border-radius: 16px;
+  padding: 20px;
+}
+.story-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(233, 69, 96, 0.1);
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+.story-content h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #fff;
+}
+.story-content p {
+  font-size: 14px;
+  color: #888;
+  line-height: 1.6;
+}
+
+.mobile-footer {
+  text-align: center;
+  padding: 24px;
+  font-size: 13px;
+  color: #666;
+}
+.light-btn:active {
+  transform: translateY(0);
+}
+.light-btn-icon {
+  margin-right: 6px;
+}
+
+/* Light Tip */
+.light-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  border-radius: 10px;
+  font-size: 13px;
+  color: #888;
+}
+.light-tip svg {
+  color: #00d4ff;
+  flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+
+<!-- Cursor Glow -->
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<!-- Scroll Progress -->
+<div class="scroll-progress"><div class="scroll-progress-bar" id="scrollProgress"></div></div>
+
+<!-- Side Nav -->
+<nav class="side-nav" id="sideNav">
+  <ul>
+    <li><a onclick="scrollTo('hero')"><span class="nav-label">首页</span><span class="nav-dot"></span></a></li>
+    <li><a onclick="scrollTo('section-1')"><span class="nav-label">全景扫描</span><span class="nav-dot"></span></a></li>
+    <li><a onclick="scrollTo('section-2')"><span class="nav-label">深度剖析</span><span class="nav-dot"></span></a></li>
+    <li><a onclick="scrollTo('section-3')"><span class="nav-label">对比反思</span><span class="nav-dot"></span></a></li>
+    <li><a onclick="scrollTo('lightUp')"><span class="nav-label">点亮黑夜</span><span class="nav-dot"></span></a></li>
+    <li><a onclick="scrollTo('conclusion')"><span class="nav-label">结语</span><span class="nav-dot"></span></a></li>
+  </ul>
+</nav>
+
+<!-- Background Decor -->
+<div class="bg-decor">
+  <div class="bg-blob bg-blob-1"></div>
+  <div class="bg-blob bg-blob-2"></div>
+  <div class="bg-blob bg-blob-3"></div>
+  <div class="bg-blob bg-blob-4"></div>
+  <div class="bg-grid"></div>
+</div>
+
+<div class="content">
+
+<!-- Hero -->
+<section class="hero" id="hero">
+  <div class="hero-shapes">
+    <div class="shape shape-circle shape-1"></div>
+    <div class="shape shape-square shape-2"></div>
+    <div class="shape shape-dot shape-3"></div>
+    <div class="shape shape-circle shape-4" style="width:32px;height:32px;"></div>
+    <div class="shape shape-square shape-5" style="width:20px;height:20px;border-color:rgba(255,215,0,0.3);"></div>
+    <div class="shape shape-dot shape-6"></div>
+  </div>
+  <div class="hero-particles" id="heroParticles"></div>
+  <div class="hero-line hero-line-1"></div>
+  <div class="hero-line hero-line-2"></div>
+
+  <div class="hero-content">
+    <div class="hero-badge">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3v3M12 18v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M3 12h3M18 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+      </svg>
+      <span>中国城市夜间劳动者全景调查</span>
+    </div>
+
+    <h1 class="hero-title">
+      <span class="gradient">城市不平</span><br>
+      <span class="white">穿梭平安</span>
+    </h1>
+
+    <p class="hero-desc">
+      当白昼的喧嚣缓缓退去，万家灯火点亮城市夜空，多数人结束一天的工作，
+      而整座城市依旧有序运转。夜间劳动者是城市里默默无闻的隐形群体，
+      他们昼夜颠倒、轮班作息，全力支撑民生服务、公共安全与夜间经济发展。
+    </p>
+
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-value red"><span data-count="1800">0</span>-<span data-count="2200">0</span><span class="hero-stat-unit">万</span></div>
+        <div class="hero-stat-label">夜间劳动者规模</div>
+      </div>
+      <div class="hero-divider"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-value blue"><span data-count="70">0</span><span class="hero-stat-unit">%</span></div>
+        <div class="hero-stat-label">交通运输与配送占比</div>
+      </div>
+      <div class="hero-divider"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-value gold"><span data-count="2.4" data-decimals="1">0</span><span class="hero-stat-unit">倍</span></div>
+        <div class="hero-stat-label">七年增长幅度</div>
+      </div>
+    </div>
+
+    <button class="hero-btn" onclick="scrollTo('section-1')">
+      开始探索数据
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 9l6 6 6-6"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="hero-scroll-hint">
+    <span>向下滚动</span>
+    <div class="scroll-mouse"></div>
+  </div>
+</section>
+
+<!-- Section 1 -->
+<section class="section" id="section-1">
+  <div class="section-divider"></div>
+  <div class="section-inner">
+    <div class="section-title reveal" data-delay="0">
+      <div class="st-chapter-wrap">
+        <div class="st-line"></div>
+        <div class="st-chapter">第一章</div>
+        <div class="st-line right"></div>
+      </div>
+      <h2>全景扫描：城市夜间劳动者群像</h2>
+      <p>从群体规模、行业分布、空间分布三大维度，勾勒夜间从业者的全貌</p>
+      <div class="st-decor">
+        <div class="st-dot red"></div>
+        <div class="st-bar"></div>
+        <div class="st-dot blue"></div>
+      </div>
+    </div>
+
+    <div class="stat-cards stat-cards-3">
+      <div class="stat-card reveal" data-delay="100">
+        <div class="sc-top-bar"></div>
+        <div class="sc-corner tl"></div>
+        <div class="sc-corner br"></div>
+        <div class="sc-glow"></div>
+        <div class="sc-value"><span data-count="1800">0</span><span class="sc-unit">万</span></div>
+        <div class="sc-label">劳动者规模下限</div>
+        <div class="sc-bar"><div class="sc-bar-fill"></div></div>
+      </div>
+      <div class="stat-card blue reveal" data-delay="200">
+        <div class="sc-top-bar"></div>
+        <div class="sc-corner tl"></div>
+        <div class="sc-corner br"></div>
+        <div class="sc-glow"></div>
+        <div class="sc-value"><span data-count="2200">0</span><span class="sc-unit">万</span></div>
+        <div class="sc-label">劳动者规模上限</div>
+        <div class="sc-bar"><div class="sc-bar-fill"></div></div>
+      </div>
+      <div class="stat-card gold reveal" data-delay="300">
+        <div class="sc-top-bar"></div>
+        <div class="sc-corner tl"></div>
+        <div class="sc-corner br"></div>
+        <div class="sc-glow"></div>
+        <div class="sc-value"><span data-count="70">0</span><span class="sc-unit">%</span></div>
+        <div class="sc-label">交通运输与配送占比</div>
+        <div class="sc-bar"><div class="sc-bar-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="text-block reveal" data-delay="200">
+      伴随夜间经济扩容与平台经济发展，我国城市夜间劳动者已形成庞大队伍。
+      综合各部门、行业协会及平台 2025 年数据测算，全国夜间劳动者规模约
+      <strong> 1800 万-2200 万人</strong>。
+      各行业从业人数差距悬殊，其中交通运输与配送行业占比达 70%，是夜间经济的核心支撑。
+    </div>
+
+    <div class="chart-center">
+      <div class="chart-container reveal" data-delay="100">
+        <h3>七大行业夜间从业者人数分布（万人）</h3>
+        <div class="chart-box" id="chartIndustryWorkers"></div>
+      </div>
+    </div>
+
+    <div class="chart-center">
+      <div class="chart-container gold reveal" data-delay="100">
+        <h3>城市夜间劳动者密度排名（人/平方公里）</h3>
+        <div class="chart-box-tall" id="chartCityDensity"></div>
+      </div>
+    </div>
+
+    <div class="text-block reveal" data-delay="200">
+      结合 2025 年中国城市夜经济指数、各地就业统计及从业者密度数据来看，
+      全国夜间劳动者呈现<span class="gold">头部城市集聚</span>、
+      <span class="gold">区域发展不均</span>的特征。
+      城市夜间劳动者的分布密度，与当地经济水平、夜间经济繁荣程度紧密相关。
+    </div>
+  </div>
+</section>
+
+<!-- Section 2 -->
+<section class="section" id="section-2">
+  <div class="section-divider blue"></div>
+  <div class="section-inner">
+    <div class="section-title reveal" data-delay="0">
+      <div class="st-chapter-wrap">
+        <div class="st-line"></div>
+        <div class="st-chapter">第二章</div>
+        <div class="st-line right"></div>
+      </div>
+      <h2>深度剖析：夜间劳动的现状与困境</h2>
+      <p>从工作强度、收入补贴、健康权益三个维度，深入剖析夜间劳动者的真实处境</p>
+      <div class="st-decor">
+        <div class="st-dot red"></div>
+        <div class="st-bar"></div>
+        <div class="st-dot blue"></div>
+      </div>
+    </div>
+
+    <div class="stat-cards stat-cards-4">
+      <div class="stat-card reveal" data-delay="50">
+        <div class="sc-top-bar"></div>
+        <div class="sc-corner tl"></div>
+        <div class="sc-corner br"></div>
+        <div class="sc-glow"></div>
+        <div class="sc-value">10.5<span class="sc-unit">h</span></div>
+        <div class="sc-label">日均工作时长</div>
+        <div class="sc-bar"><div class="sc-bar-fill"></div></div>
+      </div>
+      <div class="stat-card blue reveal" data-delay="100">
+        <div class="sc-top-bar"></div>
+        <div class="sc-corner tl"></div>
+        <div class="sc-corner br"></div>
+        <div class="sc-glow"></div>
+        <div class="sc-value">6.3<span class="sc-unit">天</span></div>
+        <div class="sc-label">每周工作天数</div>
+        <div class="sc-bar"><div class="sc-bar-fill"></div></div>
+      </div>
+      <div class="stat-card gold reveal" data-delay="150">
+        <div class="sc-top-bar"></div>
+        <div class="sc-corner tl"></div>
+        <div class="sc-corner br"></div>
+        <div class="sc-glow"></div>
+        <div class="sc-value">3.8<span class="sc-unit">天</span></div>
+        <div class="sc-label">每月休息天数</div>
+        <div class="sc-bar"><div class="sc-bar-fill"></div></div>
+      </div>
+      <div class="stat-card purple reveal" data-delay="200">
+        <div class="sc-top-bar"></div>
+        <div class="sc-corner tl"></div>
+        <div class="sc-corner br"></div>
+        <div class="sc-glow"></div>
+        <div class="sc-value">35<span class="sc-unit">%</span></div>
+        <div class="sc-label">兼任多份工作</div>
+        <div class="sc-bar"><div class="sc-bar-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="text-block reveal" data-delay="200">
+      高强度工作是夜间从业者的普遍现状。数据显示，夜间劳动者
+      <strong> 日均工作时长 10.5 小时</strong>，
+      每周工作 6.3 天，每月仅休息 3.8 天。超七成从业者夜间连续工作时长超过 4 小时，
+      35% 的人员同时兼任多份工作，长期超负荷劳作成为常态。
+    </div>
+
+    <div class="chart-center">
+      <div class="chart-container reveal" data-delay="100">
+        <div class="chart-header">
+          <h3>夜间与白班从业者工作强度对比</h3>
+          <div class="chart-toggle">
+            <button class="toggle-btn active" data-view="both" onclick="switchWorkIntensity('both')">对比</button>
+            <button class="toggle-btn" data-view="night" onclick="switchWorkIntensity('night')">夜间</button>
+            <button class="toggle-btn" data-view="day" onclick="switchWorkIntensity('day')">白班</button>
+          </div>
+        </div>
+        <div class="chart-box" id="chartWorkIntensity"></div>
+      </div>
+    </div>
+
+    <div class="chart-grid-2">
+      <div class="chart-container gold reveal" data-delay="100">
+        <h3>各行业夜间从业者月均收入排名</h3>
+        <div class="chart-box-tall" id="chartIncome"></div>
+      </div>
+      <div class="reveal" data-delay="200">
+        <div class="info-card">
+          <div class="info-card-glow"></div>
+          <h3>收入与补贴现状</h3>
+          <div class="info-big-number">¥6,200</div>
+          <div class="info-row">
+            <span class="label">月均收入</span>
+            <span class="value">低于平均水平</span>
+          </div>
+          <p class="info-text">
+            夜间劳动者整体月均收入约 6200 元，低于全国城镇非私营单位就业人员平均工资。
+          </p>
+          <div class="salary-compare">
+            <div class="salary-compare-label">行业薪资排名</div>
+            <div class="salary-compare-values">
+              <span class="high"><span class="dot green"></span>医疗最高</span>
+              <span style="color:#555;">—</span>
+              <span class="low">零售最低<span class="dot red"></span></span>
+            </div>
+            <div class="salary-bar"><div class="salary-bar-fill" style="width:100%"></div></div>
+          </div>
+          <p class="info-text">
+            行业间收入差距显著，医疗卫生服务岗位薪资最高，商业零售服务岗位薪资最低。
+            夜班补贴的分配同样不均衡，医疗、制造行业补贴覆盖率高、标准规范，
+            而多数平台配送、网约车岗位尚未建立标准化的夜班补贴制度。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-center">
+      <div class="chart-container reveal" data-delay="100">
+        <h3>夜间与白班从业者健康风险对比（患病率%）</h3>
+        <div class="chart-box" id="chartHealthRadar"></div>
+      </div>
+    </div>
+
+    <div class="text-block reveal" data-delay="200">
+      长期昼夜颠倒的作息，对劳动者身体健康造成明显影响。
+      夜间从业者患上<strong>睡眠障碍</strong>、
+      <strong>肠胃疾病</strong>、
+      <strong>焦虑抑郁</strong>等问题的概率，
+      远高于白班人群。在权益保障层面，不同岗位保障水平参差不齐，
+      劳动合同、社保、工伤保险的覆盖率有待提升，
+      新就业形态从业者的职业健康保障更是短板突出。
+    </div>
+  </div>
+</section>
+
+<!-- Section 3 -->
+<section class="section" id="section-3">
+  <div class="section-divider gold"></div>
+  <div class="section-inner">
+    <div class="section-title reveal" data-delay="0">
+      <div class="st-chapter-wrap">
+        <div class="st-line"></div>
+        <div class="st-chapter">第三章</div>
+        <div class="st-line right"></div>
+      </div>
+      <h2>对比与反思：夜间劳动的价值与保障缺口</h2>
+      <p>从横向城市对比、纵向规模增长、保障制度反思三个角度，审视夜间劳动的价值与困境</p>
+      <div class="st-decor">
+        <div class="st-dot red"></div>
+        <div class="st-bar"></div>
+        <div class="st-dot blue"></div>
+      </div>
+    </div>
+
+    <div class="chart-center">
+      <div class="chart-container blue reveal" data-delay="100">
+        <h3>2019-2025 年夜间劳动者群体规模增长趋势（万人）</h3>
+        <div class="chart-box-short" id="chartGrowth"></div>
+      </div>
+    </div>
+
+    <div class="stat-cards stat-cards-3">
+      <div class="stat-card blue reveal" data-delay="50">
+        <div class="sc-top-bar"></div>
+        <div class="sc-corner tl"></div>
+        <div class="sc-corner br"></div>
+        <div class="sc-glow"></div>
+        <div class="sc-value">890<span class="sc-unit">万</span></div>
+        <div class="sc-label">2019年规模</div>
+        <div class="sc-bar"><div class="sc-bar-fill"></div></div>
+      </div>
+      <div class="stat-card reveal" data-delay="100">
+        <div class="sc-top-bar"></div>
+        <div class="sc-corner tl"></div>
+        <div class="sc-corner br"></div>
+        <div class="sc-glow"></div>
+        <div class="sc-value">2100<span class="sc-unit">万</span></div>
+        <div class="sc-label">2025年规模</div>
+        <div class="sc-bar"><div class="sc-bar-fill"></div></div>
+      </div>
+      <div class="stat-card gold reveal" data-delay="150">
+        <div class="sc-top-bar"></div>
+        <div class="sc-corner tl"></div>
+        <div class="sc-corner br"></div>
+        <div class="sc-glow"></div>
+        <div class="sc-value">2.4<span class="sc-unit">倍</span></div>
+        <div class="sc-label">七年增长幅度</div>
+        <div class="sc-bar"><div class="sc-bar-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="text-block reveal" data-delay="200">
+      2019 至 2025 年，国内夜间经济规模稳步增长，夜间劳动者数量从 890 万人增长至 2100 万人，
+      <span class="gold">七年增长近 2.4 倍</span>，
+      人员增速远超经济规模增速。七年间，平台类夜间岗位持续扩容，
+      传统夜班岗位保持稳定。随着行业竞争加剧，从业者的收入增长也逐步放缓。
+    </div>
+
+    <div class="chart-grid-2">
+      <div class="chart-container gold reveal" data-delay="100">
+        <h3>城市夜间劳动者密度排名</h3>
+        <div class="chart-box-tall" id="chartCityRank"></div>
+      </div>
+      <div class="chart-container reveal" data-delay="200">
+        <h3>权益保障缺口分布</h3>
+        <div class="chart-box" id="chartSecurityPie"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,#e94560,#ff6b8a);"></span>
+            <span style="font-size:13px;color:#999;">劳动合同覆盖: <span style="color:#fff;">62%</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,#ffd700,#ffed4e);"></span>
+            <span style="font-size:13px;color:#999;">社保缴纳: <span style="color:#fff;">48%</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,#00d4ff,#66e0ff);"></span>
+            <span style="font-size:13px;color:#999;">工伤保险: <span style="color:#fff;">35%</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,#00cc99,#33ffcc);"></span>
+            <span style="font-size:13px;color:#999;">夜班补贴: <span style="color:#fff;">28%</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-block reveal" data-delay="200">
+      目前，绝大多数夜班岗位尚未纳入特殊工种名录，相关专项保障政策存在空白。
+      受行业类型、用工模式影响，各地各岗位的保障标准并不统一，
+      <strong>平台用工的权益保障问题尤为突出</strong>。
+      现有政策仍需加快落地，企业的主体责任也亟待进一步压实。
+    </div>
+  </div>
+</section>
+
+<!-- Conclusion -->
+<section class="conclusion" id="conclusion">
+  <div class="conclusion-glow"></div>
+  <div class="conclusion-circles">
+    <div class="conc-circle conc-circle-1"></div>
+    <div class="conc-circle conc-circle-2"></div>
+  </div>
+
+  <div class="conclusion-inner">
+    <div class="conc-top-decor">
+      <div class="conc-line left"></div>
+      <svg class="conc-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3v3M12 18v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M3 12h3M18 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+      </svg>
+      <div class="conc-line right"></div>
+    </div>
+
+    <div class="conc-badge">致敬夜色里的劳动者</div>
+
+    <h2 class="conc-title">
+      每一份深夜里的劳动<br>
+      <span class="gradient">都值得被尊重与善待</span>
+    </h2>
+
+    <p class="conc-desc">
+      在此呼吁：持续关注夜间劳动者的健康与权益，加快完善相关保障制度，
+      压实企业主体责任，让深夜的每一份付出，都能收获对等的回报与温暖。
+    </p>
+
+    <div class="conc-cards">
+      <div class="conc-card reveal" data-delay="100">
+        <div class="conc-card-glow"></div>
+        <div class="conc-icon-box">
+          <svg style="color:#e94560;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+          </svg>
+        </div>
+        <h4>关注健康</h4>
+        <p>关注夜间劳动者的身心健康，提供必要的健康保障与职业防护</p>
+      </div>
+      <div class="conc-card blue reveal" data-delay="200">
+        <div class="conc-card-glow"></div>
+        <div class="conc-icon-box">
+          <svg style="color:#00d4ff;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <h4>完善制度</h4>
+        <p>加快完善夜间劳动保障制度，规范夜班补贴与休息休假制度</p>
+      </div>
+      <div class="conc-card gold reveal" data-delay="300">
+        <div class="conc-card-glow"></div>
+        <div class="conc-icon-box">
+          <svg style="color:#ffd700;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <h4>企业责任</h4>
+        <p>压实企业主体责任，保障新就业形态劳动者的合法权益</p>
+      </div>
+    </div>
+
+    <div class="conc-final">
+      <div class="conc-final-glow"></div>
+      <p class="conc-final-text">让每一份付出，都有温暖的回响</p>
+    </div>
+
+    <div class="conc-heart-row">
+      <div class="conc-heart-line left"></div>
+      <svg class="conc-heart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+      </svg>
+      <div class="conc-heart-line right"></div>
+    </div>
+
+    <p class="conc-source">数据来源：国家部委、头部平台及第三方机构 2025 年调研数据</p>
+  </div>
+</section>
+
+<!-- Light Up the Night - Interactive Section -->
+<section class="light-up-section" id="lightUp">
+  <div class="section-inner">
+    <div class="section-title reveal" data-delay="0">
+      <div class="st-chapter-wrap">
+        <div class="st-line"></div>
+        <div class="st-chapter">公益互动</div>
+        <div class="st-line right"></div>
+      </div>
+      <h2>点亮黑夜 · 一起守护夜间劳动者</h2>
+      <p>扫码参与，为你所在的城市点亮一盏灯</p>
+      <div class="st-decor">
+        <div class="st-dot red"></div>
+        <div class="st-bar"></div>
+        <div class="st-dot gold"></div>
+      </div>
+    </div>
+
+    <div class="light-up-container reveal" data-delay="100">
+      <div class="light-up-map">
+        <div class="chart-box-tall" id="chartLightUpMap"></div>
+      </div>
+      
+      <div class="light-up-side">
+        <div class="light-up-stats">
+          <div class="lu-stat">
+            <div class="lu-stat-value gold"><span id="lightCount">0</span><span class="lu-stat-unit">次</span></div>
+            <div class="lu-stat-label">已点亮城市</div>
+          </div>
+          <div class="lu-stat">
+            <div class="lu-stat-value blue"><span id="provinceCount">0</span><span class="lu-stat-unit">个</span></div>
+            <div class="lu-stat-label">覆盖省份</div>
+          </div>
+        </div>
+
+        <div class="qr-card">
+          <div class="qr-glow"></div>
+          <div class="qr-icon" id="qrIcon">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://lordsherlinford.github.io/night-workers-data/?mobile=true" alt="扫码参与点亮黑夜公益活动" style="width:100%;height:100%;border-radius:12px;"/>
+          </div>
+          <div class="qr-title">扫码参与点亮</div>
+          <div class="qr-desc">每一次扫码，点亮一座城</div>
+          <button class="light-btn" onclick="lightUpRandomProvince()">
+            <span class="light-btn-icon">✨</span>
+            立即点亮
+          </button>
+        </div>
+
+        <div class="light-tip">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span>点亮城市，传递温暖，关注夜间劳动者权益</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Mobile Only Page -->
+<div class="mobile-page" id="mobilePage">
+  <div class="mobile-cover">
+    <div class="mobile-cover-bg"></div>
+    <div class="mobile-cover-content">
+      <div class="mobile-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+      </div>
+      <h1 class="mobile-title">点亮黑夜</h1>
+      <p class="mobile-subtitle">关注夜间劳动者 · 传递城市温暖</p>
+      <div class="mobile-stats-preview">
+        <div class="mobile-stat">
+          <span class="mobile-stat-value" id="mobileLightCount">0</span>
+          <span class="mobile-stat-label">次点亮</span>
+        </div>
+        <div class="mobile-stat">
+          <span class="mobile-stat-value" id="mobileProvinceCount">0</span>
+          <span class="mobile-stat-label">座城市</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mobile-content">
+    <div class="mobile-section">
+      <div class="location-card" id="locationCard">
+        <div class="loc-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </div>
+        <div class="loc-content">
+          <div class="loc-title">获取定位</div>
+          <div class="loc-desc" id="locationText">点击获取您所在的城市</div>
+        </div>
+        <button class="loc-btn" id="getLocationBtn" onclick="getLocationAndLightUp()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="mobile-section">
+      <button class="action-btn" id="lightUpBtn" onclick="handleMobileLightUp()" disabled>
+        <span class="action-icon">✨</span>
+        <span class="action-text" id="actionText">获取定位后点亮</span>
+      </button>
+    </div>
+
+    <div class="mobile-section">
+      <div class="mini-map-container" id="miniMapContainer">
+        <div class="mini-map-title">点亮地图</div>
+        <div class="mini-map" id="miniMap"></div>
+        <div class="mini-map-legend">
+          <span class="legend-dot lit"></span>已点亮
+          <span class="legend-dot unlit"></span>未点亮
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-section">
+      <div class="story-card">
+        <div class="story-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e94560" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" x2="8" y1="13" y2="13"/>
+            <line x1="16" x2="8" y1="17" y2="17"/>
+            <line x1="10" x2="8" y1="9" y2="9"/>
+          </svg>
+        </div>
+        <div class="story-content">
+          <h3>他们的故事</h3>
+          <p>每一位夜间劳动者都在用自己的方式守护着城市的夜晚。让我们一起点亮城市，传递温暖。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-footer">
+      <p>点亮黑夜 · 关注夜间劳动者权益</p>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// Check if mobile mode
+function isMobileMode() {
+  const params = new URLSearchParams(window.location.search);
+  return params.has('mobile');
+}
+
+// Toggle mobile page visibility
+function toggleMobilePage() {
+  const mobilePage = document.getElementById('mobilePage');
+  const mainContent = document.querySelector('.content');
+  
+  if (isMobileMode()) {
+    mobilePage.style.display = 'block';
+    mainContent.style.display = 'none';
+    document.body.style.background = '#0a0a12';
+  } else {
+    mobilePage.style.display = 'none';
+    mainContent.style.display = 'block';
+  }
+}
+
+// Geolocation
+let currentProvince = '';
+
+function getLocationAndLightUp() {
+  if (!navigator.geolocation) {
+    alert('您的浏览器不支持定位功能');
+    return;
+  }
+
+  const btn = document.getElementById('getLocationBtn');
+  const text = document.getElementById('locationText');
+  
+  btn.disabled = true;
+  text.textContent = '正在获取位置...';
+
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      reverseGeocode(position.coords.latitude, position.coords.longitude);
+    },
+    function(error) {
+      text.textContent = '定位失败，将随机选择城市';
+      currentProvince = getRandomProvince();
+      updateLocationUI(currentProvince);
+      enableLightUpBtn();
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+function reverseGeocode(lat, lng) {
+  fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lng}&key=YOUR_API_KEY`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.results && data.results.length > 0) {
+        const components = data.results[0].components;
+        const province = components.state || components.province || getRandomProvince();
+        currentProvince = province;
+        updateLocationUI(province);
+      } else {
+        currentProvince = getRandomProvince();
+        updateLocationUI(currentProvince);
+      }
+      enableLightUpBtn();
+    })
+    .catch(() => {
+      currentProvince = getRandomProvince();
+      updateLocationUI(currentProvince);
+      enableLightUpBtn();
+    });
+}
+
+function getRandomProvince() {
+  const provinces = ['北京', '上海', '广东', '浙江', '江苏', '四川', '湖北', '湖南', '山东', '河南'];
+  return provinces[Math.floor(Math.random() * provinces.length)];
+}
+
+function updateLocationUI(province) {
+  const text = document.getElementById('locationText');
+  text.textContent = `当前城市: ${province}`;
+  
+  const btn = document.getElementById('getLocationBtn');
+  btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/></svg>';
+}
+
+function enableLightUpBtn() {
+  const btn = document.getElementById('lightUpBtn');
+  const text = document.getElementById('actionText');
+  
+  btn.disabled = false;
+  btn.classList.add('active');
+  text.textContent = `助力点亮 ${currentProvince}`;
+}
+
+function handleMobileLightUp() {
+  if (!currentProvince) {
+    alert('请先获取定位');
+    return;
+  }
+
+  const btn = document.getElementById('lightUpBtn');
+  const text = document.getElementById('actionText');
+  
+  btn.disabled = true;
+  text.textContent = '点亮中...';
+
+  setTimeout(() => {
+    lightUpProvince(currentProvince);
+    
+    text.textContent = '点亮成功！';
+    btn.classList.add('success');
+    
+    setTimeout(() => {
+      text.textContent = `再次点亮 ${currentProvince}`;
+      btn.disabled = false;
+    }, 2000);
+  }, 800);
+}
+
+function lightUpProvince(province) {
+  litProvinces[province] = (litProvinces[province] || 0) + 1;
+  totalLights++;
+  
+  animateNumber('lightCount', totalLights);
+  animateNumber('provinceCount', Object.keys(litProvinces).length);
+  animateNumber('mobileLightCount', totalLights);
+  animateNumber('mobileProvinceCount', Object.keys(litProvinces).length);
+  
+  if (lightUpChart) {
+    updateLightUpMap();
+  }
+  
+  updateMiniMap();
+}
+
+function updateMiniMap() {
+  const miniMap = document.getElementById('miniMap');
+  if (!miniMap) return;
+  
+  const provinces = ['北京', '天津', '河北', '山西', '内蒙古', '辽宁', '吉林', '黑龙江',
+    '上海', '江苏', '浙江', '安徽', '福建', '江西', '山东', '河南', '湖北', '湖南',
+    '广东', '广西', '海南', '重庆', '四川', '贵州', '云南', '西藏', '陕西', '甘肃',
+    '青海', '宁夏', '新疆', '香港', '澳门', '台湾'];
+  
+  miniMap.innerHTML = provinces.map((p, i) => {
+    const isLit = litProvinces[p] > 0;
+    const size = Math.min(8, 4 + (litProvinces[p] || 0));
+    return `<div class="mini-map-dot ${isLit ? 'lit' : ''}" 
+                style="--size:${size}px;"
+                title="${p}: ${litProvinces[p] || 0}次">
+            </div>`;
+  }).join('');
+}
+
+// Initialize mobile page
+toggleMobilePage();
+
+// Generate hero particles
+(function() {
+  const container = document.getElementById('heroParticles');
+  if (!container) return;
+  for (let i = 0; i < 40; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.top = Math.random() * 100 + '%';
+    p.style.animationDelay = Math.random() * 4 + 's';
+    p.style.animationDuration = (4 + Math.random() * 5) + 's';
+    p.style.opacity = (0.2 + Math.random() * 0.4).toFixed(2);
+    container.appendChild(p);
+  }
+})();
+
+// Scroll to section
+function scrollTo(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Scroll progress
+window.addEventListener('scroll', function() {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+  const bar = document.getElementById('scrollProgress');
+  if (bar) bar.style.width = progress + '%';
+
+  // Update side nav
+  const sections = ['hero', 'section-1', 'section-2', 'section-3', 'lightUp', 'conclusion'];
+  const mid = scrollTop + window.innerHeight / 2;
+  const nav = document.getElementById('sideNav');
+  if (!nav) return;
+  const links = nav.querySelectorAll('a');
+  links.forEach(function(link, i) {
+    const sec = document.getElementById(sections[i]);
+    if (sec && sec.offsetTop <= mid && (sec.offsetTop + sec.offsetHeight) > mid) {
+      link.classList.add('active');
+    } else {
+      link.classList.remove('active');
+    }
+  });
+});
+
+// Reveal on scroll
+function initReveal() {
+  const els = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        const delay = entry.target.getAttribute('data-delay') || 0;
+        setTimeout(function() {
+          entry.target.classList.add('visible');
+        }, parseInt(delay));
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 });
+
+  els.forEach(function(el) { observer.observe(el); });
+}
+window.addEventListener('load', initReveal);
+
+// Charts
+const chartInstances = {};
+
+function initCharts() {
+  // Industry Workers
+  const c1 = echarts.init(document.getElementById('chartIndustryWorkers'));
+  c1.setOption({
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(22, 33, 62, 0.95)',
+      borderColor: 'rgba(233, 69, 96, 0.3)',
+      textStyle: { color: '#fff' },
+      formatter: '{b}: {c} 万人'
+    },
+    grid: { left: '3%', right: '10%', bottom: '3%', top: '5%', containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLabel: { color: '#888' },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    yAxis: {
+      type: 'category',
+      data: ['制造生产', '文体娱乐', '商业零售', '餐饮住宿', '公共安全', '医疗卫生', '交通运输与配送'],
+      axisLabel: { color: '#ccc', fontSize: 12 },
+      axisLine: { show: false },
+      axisTick: { show: false }
+    },
+    series: [{
+      type: 'bar',
+      data: [0, 0, 0, 0, 0, 0, 0],
+      barWidth: '60%',
+      itemStyle: {
+        borderRadius: [0, 4, 4, 0],
+        color: {
+          type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
+          colorStops: [
+            { offset: 0, color: '#e94560' },
+            { offset: 1, color: '#ff6b8a' }
+          ]
+        },
+        shadowColor: 'rgba(233, 69, 96, 0.5)',
+        shadowBlur: 10
+      },
+      emphasis: {
+        itemStyle: {
+          shadowColor: 'rgba(233, 69, 96, 0.8)',
+          shadowBlur: 20
+        }
+      },
+      label: { show: true, position: 'right', color: '#fff', fontSize: 12, formatter: '{c} 万' },
+      animationDuration: 2000,
+      animationEasing: 'elasticOut',
+      animationDelay: function(idx) {
+        return idx * 120;
+      }
+    }]
+  });
+  chartInstances.industryWorkers = {
+    chart: c1,
+    realData: [40, 80, 150, 180, 210, 280, 1260],
+    type: 'bar-single'
+  };
+
+  // City Density
+  const c3 = echarts.init(document.getElementById('chartCityDensity'));
+  c3.setOption({
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(22, 33, 62, 0.95)',
+      borderColor: 'rgba(255, 215, 0, 0.3)',
+      textStyle: { color: '#fff' },
+      formatter: '{b}: {c} 人/平方公里'
+    },
+    grid: { left: '3%', right: '12%', bottom: '3%', top: '5%', containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLabel: { color: '#888' },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    yAxis: {
+      type: 'category',
+      data: ['杭州', '成都', '重庆', '北京', '广州', '深圳', '上海'],
+      axisLabel: { color: '#ccc', fontSize: 13 },
+      axisLine: { show: false },
+      axisTick: { show: false }
+    },
+    series: [{
+      type: 'bar',
+      data: [0, 0, 0, 0, 0, 0, 0],
+      barWidth: '55%',
+      itemStyle: {
+        borderRadius: [0, 6, 6, 0],
+        color: {
+          type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
+          colorStops: [
+            { offset: 0, color: '#ffd700' },
+            { offset: 1, color: '#ff8c00' }
+          ]
+        },
+        shadowColor: 'rgba(255, 215, 0, 0.4)',
+        shadowBlur: 8
+      },
+      emphasis: {
+        itemStyle: {
+          shadowColor: 'rgba(255, 215, 0, 0.7)',
+          shadowBlur: 15
+        }
+      },
+      label: { show: true, position: 'right', color: '#ffd700', fontSize: 12, fontWeight: 'bold' },
+      animationDuration: 2000,
+      animationEasing: 'elasticOut',
+      animationDelay: function(idx) {
+        return idx * 120;
+      }
+    }]
+  });
+  chartInstances.cityDensity = {
+    chart: c3,
+    realData: [820, 880, 950, 1180, 1320, 1450, 1600],
+    type: 'bar-single'
+  };
+
+  // Work Intensity
+  const c4 = echarts.init(document.getElementById('chartWorkIntensity'));
+  c4.setOption({
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(22, 33, 62, 0.95)',
+      borderColor: 'rgba(233, 69, 96, 0.3)',
+      textStyle: { color: '#fff' }
+    },
+    legend: { data: ['夜间从业者', '白班从业者'], textStyle: { color: '#ccc' }, top: 0 },
+    grid: { left: '3%', right: '5%', bottom: '8%', top: '15%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: ['日均工时(h)', '周工作天数', '月休息天数', '连续工作4h+占比(%)'],
+      axisLabel: { color: '#ccc', fontSize: 11 },
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+      axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { color: '#888' },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    series: [
+      {
+        name: '夜间从业者', type: 'bar', data: [0, 0, 0, 0],
+        barWidth: '30%',
+        itemStyle: {
+          borderRadius: [4, 4, 0, 0],
+          color: { type: 'linear', x: 0, y: 1, x2: 0, y2: 0, colorStops: [{ offset: 0, color: '#e94560' }, { offset: 1, color: '#ff6b8a' }] },
+          shadowColor: 'rgba(233, 69, 96, 0.4)',
+          shadowBlur: 8
+        },
+        animationDuration: 1800,
+        animationEasing: 'elasticOut',
+        animationDelay: function(idx) {
+          return idx * 150;
+        }
+      },
+      {
+        name: '白班从业者', type: 'bar', data: [0, 0, 0, 0],
+        barWidth: '30%',
+        itemStyle: {
+          borderRadius: [4, 4, 0, 0],
+          color: { type: 'linear', x: 0, y: 1, x2: 0, y2: 0, colorStops: [{ offset: 0, color: '#00d4ff' }, { offset: 1, color: '#66e0ff' }] },
+          shadowColor: 'rgba(0, 212, 255, 0.4)',
+          shadowBlur: 8
+        },
+        animationDuration: 1800,
+        animationEasing: 'elasticOut',
+        animationDelay: function(idx) {
+          return idx * 150 + 80;
+        }
+      }
+    ]
+  });
+  chartInstances.workIntensity = {
+    chart: c4,
+    realData: [[10.5, 6.3, 3.8, 72], [8, 5, 8, 30]],
+    type: 'bar-double'
+  };
+
+  // Income
+  const c5 = echarts.init(document.getElementById('chartIncome'));
+  c5.setOption({
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(22, 33, 62, 0.95)',
+      borderColor: 'rgba(255, 215, 0, 0.3)',
+      textStyle: { color: '#fff' },
+      formatter: '{b}: {c} 元/月'
+    },
+    grid: { left: '3%', right: '12%', bottom: '3%', top: '5%', containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLabel: { color: '#888' },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    yAxis: {
+      type: 'category',
+      data: ['商业零售', '文体娱乐', '餐饮住宿', '交通运输', '公共安全', '制造生产', '医疗卫生'],
+      axisLabel: { color: '#ccc', fontSize: 12 },
+      axisLine: { show: false },
+      axisTick: { show: false }
+    },
+    series: [{
+      type: 'bar',
+      data: [0, 0, 0, 0, 0, 0, 0],
+      barWidth: '55%',
+      itemStyle: {
+        borderRadius: [0, 6, 6, 0],
+        color: function(params) {
+          const colors = [
+            ['#666', '#888'],
+            ['#9966ff', '#c299ff'],
+            ['#00cc99', '#33ffcc'],
+            ['#00d4ff', '#66e0ff'],
+            ['#ff8c00', '#ffb347'],
+            ['#ffd700', '#ffed4e'],
+            ['#e94560', '#ff6b8a']
+          ];
+          const c = colors[params.dataIndex];
+          return { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: c[0] }, { offset: 1, color: c[1] }] };
+        }
+      },
+      label: { show: true, position: 'right', color: '#fff', fontSize: 12, formatter: '¥{c}' },
+      animationDuration: 2000,
+      animationEasing: 'elasticOut',
+      animationDelay: function(idx) {
+        return idx * 100;
+      }
+    }]
+  });
+  chartInstances.income = {
+    chart: c5,
+    realData: [4800, 5500, 5800, 6500, 7200, 7500, 9800],
+    type: 'bar-single'
+  };
+
+  // Health Radar
+  const c6 = echarts.init(document.getElementById('chartHealthRadar'));
+  c6.setOption({
+    tooltip: {
+      backgroundColor: 'rgba(22, 33, 62, 0.95)',
+      borderColor: 'rgba(233, 69, 96, 0.3)',
+      textStyle: { color: '#fff' }
+    },
+    legend: { data: ['夜间从业者', '白班从业者'], textStyle: { color: '#ccc' }, bottom: 0 },
+    radar: {
+      indicator: [
+        { name: '睡眠障碍', max: 80 },
+        { name: '肠胃疾病', max: 80 },
+        { name: '焦虑抑郁', max: 80 },
+        { name: '心血管问题', max: 80 },
+        { name: '颈椎腰椎病', max: 80 }
+      ],
+      axisName: { color: '#ccc', fontSize: 12 },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+      splitArea: { areaStyle: { color: ['rgba(233, 69, 96, 0.02)', 'rgba(233, 69, 96, 0.05)'] } },
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }
+    },
+    series: [{
+      type: 'radar',
+      data: [
+        {
+          value: [0, 0, 0, 0, 0],
+          name: '夜间从业者',
+          areaStyle: { color: 'rgba(233, 69, 96, 0.3)' },
+          lineStyle: { color: '#e94560', width: 2 },
+          itemStyle: { color: '#e94560' }
+        },
+        {
+          value: [0, 0, 0, 0, 0],
+          name: '白班从业者',
+          areaStyle: { color: 'rgba(0, 212, 255, 0.2)' },
+          lineStyle: { color: '#00d4ff', width: 2 },
+          itemStyle: { color: '#00d4ff' }
+        }
+      ],
+      animationDuration: 2500,
+      animationEasing: 'cubicOut'
+    }]
+  });
+  chartInstances.healthRadar = {
+    chart: c6,
+    realData: [[65, 52, 48, 35, 58], [25, 20, 18, 15, 22]],
+    type: 'radar'
+  };
+
+  // Growth Line
+  const c7 = echarts.init(document.getElementById('chartGrowth'));
+  c7.setOption({
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(22, 33, 62, 0.95)',
+      borderColor: 'rgba(0, 212, 255, 0.3)',
+      textStyle: { color: '#fff' },
+      formatter: '{b}年: {c} 万人'
+    },
+    grid: { left: '3%', right: '5%', bottom: '8%', top: '10%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: ['2019', '2020', '2021', '2022', '2023', '2024', '2025'],
+      axisLabel: { color: '#ccc' },
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+      axisTick: { show: false },
+      boundaryGap: false
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { color: '#888', formatter: '{value} 万' },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    series: [{
+      type: 'line',
+      data: [0, 0, 0, 0, 0, 0, 0],
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 8,
+      lineStyle: {
+        width: 3,
+        color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: '#e94560' }, { offset: 1, color: '#00d4ff' }] }
+      },
+      itemStyle: {
+        color: '#fff',
+        borderColor: '#e94560',
+        borderWidth: 2,
+        shadowColor: 'rgba(233, 69, 96, 0.5)',
+        shadowBlur: 10
+      },
+      emphasis: {
+        itemStyle: {
+          symbolSize: 12,
+          shadowColor: 'rgba(233, 69, 96, 0.8)',
+          shadowBlur: 20
+        }
+      },
+      areaStyle: {
+        color: {
+          type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [{ offset: 0, color: 'rgba(233, 69, 96, 0.4)' }, { offset: 1, color: 'rgba(233, 69, 96, 0.05)' }]
+        }
+      },
+      animationDuration: 2500,
+      animationEasing: 'cubicOut'
+    }]
+  });
+  chartInstances.growth = {
+    chart: c7,
+    realData: [890, 1050, 1320, 1580, 1780, 1950, 2100],
+    type: 'line'
+  };
+
+  // City Rank
+  const c8 = echarts.init(document.getElementById('chartCityRank'));
+  c8.setOption({
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(22, 33, 62, 0.95)',
+      borderColor: 'rgba(255, 215, 0, 0.3)',
+      textStyle: { color: '#fff' },
+      formatter: '{b}: {c} 人/km²'
+    },
+    grid: { left: '3%', right: '15%', bottom: '3%', top: '5%', containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLabel: { color: '#888' },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    yAxis: {
+      type: 'category',
+      data: ['杭州', '成都', '重庆', '北京', '广州', '深圳', '上海'],
+      axisLabel: { color: '#ccc', fontSize: 13 },
+      axisLine: { show: false },
+      axisTick: { show: false }
+    },
+    series: [{
+      type: 'bar',
+      data: [0, 0, 0, 0, 0, 0, 0],
+      barWidth: '55%',
+      itemStyle: {
+        borderRadius: [0, 6, 6, 0],
+        color: {
+          type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
+          colorStops: [{ offset: 0, color: '#ffd700' }, { offset: 1, color: '#ff8c00' }]
+        },
+        shadowColor: 'rgba(255, 215, 0, 0.4)',
+        shadowBlur: 8
+      },
+      emphasis: {
+        itemStyle: {
+          shadowColor: 'rgba(255, 215, 0, 0.7)',
+          shadowBlur: 15
+        }
+      },
+      label: { show: true, position: 'right', color: '#ffd700', fontSize: 12, fontWeight: 'bold' },
+      animationDuration: 2000,
+      animationEasing: 'elasticOut',
+      animationDelay: function(idx) {
+        return idx * 120;
+      }
+    }]
+  });
+  chartInstances.cityRank = {
+    chart: c8,
+    realData: [820, 880, 950, 1180, 1320, 1450, 1600],
+    type: 'bar-single'
+  };
+
+  // Security Pie
+  const c9 = echarts.init(document.getElementById('chartSecurityPie'));
+  c9.setOption({
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(22, 33, 62, 0.95)',
+      borderColor: 'rgba(233, 69, 96, 0.3)',
+      textStyle: { color: '#fff' },
+      formatter: '{b}: {c}%'
+    },
+    legend: { show: false },
+    series: [{
+      type: 'pie',
+      radius: ['50%', '75%'],
+      center: ['40%', '50%'],
+      avoidLabelOverlap: false,
+      itemStyle: { borderRadius: 6, borderColor: '#16213e', borderWidth: 2 },
+      label: { show: false },
+      emphasis: {
+        label: { show: true, fontSize: 16, fontWeight: 'bold', color: '#fff' },
+        itemStyle: {
+          shadowColor: 'rgba(233, 69, 96, 0.5)',
+          shadowBlur: 20
+        }
+      },
+      data: [
+        { value: 0, name: '已完善保障', itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 1, colorStops: [{ offset: 0, color: '#00cc99' }, { offset: 1, color: '#33ffcc' }] } } },
+        { value: 0, name: '部分保障', itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 1, colorStops: [{ offset: 0, color: '#ffd700' }, { offset: 1, color: '#ffed4e' }] } } },
+        { value: 0, name: '保障缺失', itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 1, colorStops: [{ offset: 0, color: '#e94560' }, { offset: 1, color: '#ff6b8a' }] } } }
+      ],
+      animationDuration: 1800,
+      animationEasing: 'elasticOut'
+    }]
+  });
+  chartInstances.securityPie = {
+    chart: c9,
+    realData: [28, 34, 38],
+    type: 'pie'
+  };
+}
+
+// Trigger chart animation
+function triggerChartAnimation(key) {
+  const item = chartInstances[key];
+  if (!item || item.animated) return;
+  item.animated = true;
+
+  const chart = item.chart;
+  const option = chart.getOption();
+
+  setTimeout(function() {
+    if (item.type === 'bar-single') {
+      option.series[0].data = item.realData;
+    } else if (item.type === 'bar-double') {
+      option.series[0].data = item.realData[0];
+      option.series[1].data = item.realData[1];
+    } else if (item.type === 'radar') {
+      option.series[0].data[0].value = item.realData[0];
+      option.series[0].data[1].value = item.realData[1];
+    } else if (item.type === 'line') {
+      option.series[0].data = item.realData;
+    } else if (item.type === 'pie') {
+      option.series[0].data.forEach(function(d, i) {
+        d.value = item.realData[i];
+      });
+    }
+    chart.setOption(option);
+  }, 300);
+}
+
+// Reset chart animation
+function resetChartAnimation(key) {
+  const item = chartInstances[key];
+  if (!item || !item.animated) return;
+  item.animated = false;
+
+  const chart = item.chart;
+  const option = chart.getOption();
+
+  if (item.type === 'bar-single') {
+    option.series[0].data = item.realData.map(function() { return 0; });
+  } else if (item.type === 'bar-double') {
+    option.series[0].data = item.realData[0].map(function() { return 0; });
+    option.series[1].data = item.realData[1].map(function() { return 0; });
+  } else if (item.type === 'radar') {
+    option.series[0].data[0].value = item.realData[0].map(function() { return 0; });
+    option.series[0].data[1].value = item.realData[1].map(function() { return 0; });
+  } else if (item.type === 'line') {
+    option.series[0].data = item.realData.map(function() { return 0; });
+  } else if (item.type === 'pie') {
+    option.series[0].data.forEach(function(d) { d.value = 0; });
+  }
+  chart.setOption(option, { notMerge: false, lazyUpdate: true });
+}
+
+// Resize charts
+window.addEventListener('resize', function() {
+  Object.values(chartInstances).forEach(function(item) { item.chart.resize(); });
+});
+
+// Initialize charts when page loads
+window.addEventListener('load', function() {
+  setTimeout(initCharts, 300);
+});
+
+// Chart lazy loading with IntersectionObserver
+function initChartObserver() {
+  const chartContainers = document.querySelectorAll('.chart-container');
+  const chartMap = {
+    'chartIndustryWorkers': 'industryWorkers',
+    'chartCityDensity': 'cityDensity',
+    'chartWorkIntensity': 'workIntensity',
+    'chartIncome': 'income',
+    'chartHealthRadar': 'healthRadar',
+    'chartGrowth': 'growth',
+    'chartCityRank': 'cityRank',
+    'chartSecurityPie': 'securityPie'
+  };
+
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      const chartBox = entry.target.querySelector('.chart-box, .chart-box-tall, .chart-box-short');
+      if (!chartBox) return;
+      const chartId = chartBox.id;
+      const key = chartMap[chartId];
+      if (!key) return;
+
+      if (entry.isIntersecting) {
+        triggerChartAnimation(key);
+      } else {
+        resetChartAnimation(key);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  chartContainers.forEach(function(container) {
+    observer.observe(container);
+  });
+}
+
+window.addEventListener('load', function() {
+  setTimeout(initChartObserver, 500);
+});
+
+// Back to top button
+function initBackToTop() {
+  const btn = document.getElementById('backToTop');
+  if (!btn) return;
+  
+  window.addEventListener('scroll', function() {
+    if (window.scrollY > 500) {
+      btn.classList.add('show');
+    } else {
+      btn.classList.remove('show');
+    }
+  });
+  
+  btn.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+
+// Counter animation
+function animateCounter(el) {
+  const target = parseFloat(el.getAttribute('data-count'));
+  const decimals = parseInt(el.getAttribute('data-decimals') || '0');
+  const duration = 2000;
+  const startTime = performance.now();
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const current = target * easeOut;
+    
+    el.textContent = decimals > 0 ? current.toFixed(decimals) : Math.floor(current);
+    
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      el.textContent = decimals > 0 ? target.toFixed(decimals) : target;
+    }
+  }
+  
+  requestAnimationFrame(update);
+}
+
+function initCounters() {
+  const counters = document.querySelectorAll('[data-count]');
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        if (!el.dataset.animated) {
+          el.dataset.animated = 'true';
+          animateCounter(el);
+        }
+      } else {
+        const el = entry.target;
+        if (el.dataset.animated) {
+          el.dataset.animated = '';
+          el.textContent = '0';
+        }
+      }
+    });
+  }, { threshold: 0.5 });
+  
+  counters.forEach(function(counter) {
+    observer.observe(counter);
+  });
+}
+
+// Work intensity chart switch
+function switchWorkIntensity(view) {
+  const item = chartInstances.workIntensity;
+  if (!item) return;
+  
+  const chart = item.chart;
+  const option = chart.getOption();
+  const nightData = item.realData[0];
+  const dayData = item.realData[1];
+  
+  // Update buttons
+  document.querySelectorAll('.chart-toggle .toggle-btn').forEach(function(btn) {
+    btn.classList.remove('active');
+  });
+  document.querySelector('.toggle-btn[data-view="' + view + '"]').classList.add('active');
+  
+  if (view === 'both') {
+    option.series[0].data = nightData;
+    option.series[1].data = dayData;
+    option.legend[0].show = true;
+  } else if (view === 'night') {
+    option.series[0].data = nightData;
+    option.series[1].data = [0, 0, 0, 0];
+    option.legend[0].show = false;
+  } else if (view === 'day') {
+    option.series[0].data = [0, 0, 0, 0];
+    option.series[1].data = dayData;
+    option.legend[0].show = false;
+  }
+  
+  chart.setOption(option);
+}
+
+// Cursor glow
+function initCursorGlow() {
+  const glow = document.getElementById('cursorGlow');
+  if (!glow) return;
+  
+  let mouseX = 0, mouseY = 0;
+  let glowX = 0, glowY = 0;
+  
+  document.addEventListener('mousemove', function(e) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+  
+  function animate() {
+    glowX += (mouseX - glowX) * 0.1;
+    glowY += (mouseY - glowY) * 0.1;
+    glow.style.left = glowX + 'px';
+    glow.style.top = glowY + 'px';
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+window.addEventListener('load', function() {
+  setTimeout(initBackToTop, 200);
+  setTimeout(initCounters, 300);
+  setTimeout(initCursorGlow, 400);
+  setTimeout(initLightUpMap, 500);
+});
+
+// Light Up the Night - China Map
+let lightUpChart = null;
+let litProvinces = {};
+let totalLights = 0;
+
+const provinceNames = [
+  '北京', '天津', '上海', '重庆', '河北', '河南', '云南', '辽宁', '黑龙江', '湖南',
+  '安徽', '山东', '新疆', '江苏', '浙江', '江西', '湖北', '广西', '甘肃', '山西',
+  '内蒙古', '陕西', '吉林', '福建', '贵州', '广东', '青海', '西藏', '四川', '宁夏',
+  '海南', '台湾', '香港', '澳门'
+];
+
+function initLightUpMap() {
+  const chartDom = document.getElementById('chartLightUpMap');
+  if (!chartDom) return;
+
+  // Load China map from CDN
+  fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+    .then(function(res) { return res.json(); })
+    .then(function(geoJson) {
+      echarts.registerMap('china', geoJson);
+      
+      lightUpChart = echarts.init(chartDom);
+      updateLightUpMap();
+      
+      // Auto light up first 5 provinces for demo
+      setTimeout(function() {
+        for (let i = 0; i < 5; i++) {
+          setTimeout(function() {
+            lightUpRandomProvince();
+          }, i * 300);
+        }
+      }, 800);
+    })
+    .catch(function() {
+      // Fallback: show bar chart if map fails to load
+      showLightUpFallback(chartDom);
+    });
+
+  // Resize observer
+  window.addEventListener('resize', function() {
+    if (lightUpChart) lightUpChart.resize();
+  });
+}
+
+function updateLightUpMap() {
+  if (!lightUpChart) return;
+
+  const data = provinceNames.map(function(name) {
+    const count = litProvinces[name] || 0;
+    return {
+      name: name,
+      value: count,
+      itemStyle: {
+        areaColor: count > 0 ? {
+          type: 'radial', x: 0.5, y: 0.5, r: 0.8,
+          colorStops: [
+            { offset: 0, color: 'rgba(255, 215, 0, 0.9)' },
+            { offset: 0.5, color: 'rgba(233, 69, 96, 0.7)' },
+            { offset: 1, color: 'rgba(233, 69, 96, 0.5)' }
+          ]
+        } : 'rgba(255, 255, 255, 0.03)'
+      },
+      emphasis: {
+        itemStyle: {
+          areaColor: count > 0 ? 'rgba(255, 215, 0, 0.6)' : 'rgba(255, 255, 255, 0.1)'
+        },
+        label: {
+          show: true,
+          color: '#fff',
+          fontSize: 12,
+          fontWeight: 'bold'
+        }
+      }
+    };
+  });
+
+  lightUpChart.setOption({
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(22, 33, 62, 0.95)',
+      borderColor: 'rgba(255, 215, 0, 0.3)',
+      borderWidth: 1,
+      textStyle: { color: '#fff' },
+      padding: [12, 16],
+      formatter: function(params) {
+        const count = params.value || 0;
+        const status = count > 0 ? '<span style="color:#ffd700;">已点亮</span>' : '<span style="color:#666;">未点亮</span>';
+        return `<div style="font-weight:bold;margin-bottom:4px;">${params.name}</div>
+                <div>状态: ${status}</div>
+                <div>点亮次数: <span style="color:#00d4ff;">${count}</span> 次</div>`;
+      }
+    },
+    legend: {
+      show: true,
+      data: ['已点亮', '未点亮'],
+      bottom: 10,
+      left: 'center',
+      textStyle: { color: '#888', fontSize: 12 },
+      itemWidth: 16,
+      itemHeight: 10,
+      itemGap: 24
+    },
+    geo: {
+      map: 'china',
+      roam: false,
+      zoom: 1.15,
+      center: [104, 35],
+      label: {
+        show: false
+      },
+      itemStyle: {
+        areaColor: 'rgba(255, 255, 255, 0.03)',
+        borderColor: 'rgba(255, 215, 0, 0.12)',
+        borderWidth: 1,
+        shadowColor: 'rgba(0, 0, 0, 0.3)',
+        shadowBlur: 10,
+        shadowOffsetY: 5
+      },
+      emphasis: {
+        itemStyle: {
+          areaColor: 'rgba(255, 215, 0, 0.4)',
+          borderColor: 'rgba(255, 215, 0, 0.6)',
+          borderWidth: 2,
+          shadowColor: 'rgba(255, 215, 0, 0.3)',
+          shadowBlur: 20
+        },
+        label: {
+          show: true,
+          color: '#fff',
+          fontSize: 12,
+          fontWeight: 'bold',
+          shadowColor: 'rgba(0, 0, 0, 0.5)',
+          shadowBlur: 10
+        }
+      }
+    },
+    series: [{
+      type: 'map',
+      map: 'china',
+      geoIndex: 0,
+      data: data,
+      animationDuration: 800,
+      animationEasing: 'cubicOut'
+    }, {
+      type: 'effectScatter',
+      coordinateSystem: 'geo',
+      data: Object.keys(litProvinces).map(function(name) {
+        const coord = getProvinceCoord(name);
+        if (!coord) return null;
+        return { 
+          name: name, 
+          value: coord,
+          symbolSize: 6 + (litProvinces[name] || 0) * 0.3
+        };
+      }).filter(function(d) { return d; }),
+      symbolSize: function(val) {
+        return val[2] ? (8 + (litProvinces[val[2]] || 0) * 0.3) : 8;
+      },
+      rippleEffect: {
+        brushType: 'fill',
+        scale: 4,
+        period: 3,
+        color: '#ffd700'
+      },
+      itemStyle: {
+        color: '#ffd700',
+        shadowBlur: 15,
+        shadowColor: 'rgba(255, 215, 0, 0.8)',
+        borderColor: '#fff',
+        borderWidth: 2
+      },
+      animationDuration: 1000,
+      animationEasing: 'elasticOut'
+    }, {
+      type: 'scatter',
+      coordinateSystem: 'geo',
+      data: Object.keys(litProvinces).map(function(name) {
+        const coord = getProvinceCoord(name);
+        if (!coord) return null;
+        return { 
+          name: name, 
+          value: coord,
+          symbolSize: 4 + (litProvinces[name] || 0) * 0.2
+        };
+      }).filter(function(d) { return d; }),
+      itemStyle: {
+        color: '#fff',
+        shadowBlur: 8,
+        shadowColor: 'rgba(255, 215, 0, 0.6)',
+        opacity: 0.8
+      },
+      animationDuration: 1200,
+      animationDelay: function(idx) {
+        return idx * 100;
+      }
+    }],
+    animationDuration: 1000,
+    animationEasing: 'cubicOut'
+  });
+}
+
+// Approximate province coordinates
+function getProvinceCoord(name) {
+  const coords = {
+    '北京': [116.4, 39.9], '天津': [117.2, 39.1], '上海': [121.5, 31.2],
+    '重庆': [106.5, 29.5], '河北': [114.5, 38.0], '河南': [113.6, 34.8],
+    '云南': [102.7, 25.0], '辽宁': [123.4, 41.8], '黑龙江': [126.6, 45.8],
+    '湖南': [112.9, 28.2], '安徽': [117.3, 31.8], '山东': [117.0, 36.7],
+    '新疆': [87.6, 43.8], '江苏': [118.8, 32.1], '浙江': [120.2, 30.3],
+    '江西': [115.9, 28.7], '湖北': [114.3, 30.6], '广西': [108.3, 22.8],
+    '甘肃': [103.8, 36.1], '山西': [112.5, 37.9], '内蒙古': [111.7, 40.8],
+    '陕西': [108.9, 34.3], '吉林': [125.3, 43.9], '福建': [119.3, 26.1],
+    '贵州': [106.7, 26.6], '广东': [113.3, 23.1], '青海': [101.8, 36.6],
+    '西藏': [91.1, 29.6], '四川': [104.1, 30.7], '宁夏': [106.3, 38.5],
+    '海南': [110.3, 20.0], '台湾': [121.5, 25.0], '香港': [114.2, 22.3],
+    '澳门': [113.5, 22.2]
+  };
+  if (coords[name]) {
+    return [coords[name][0], coords[name][1], name];
+  }
+  return null;
+}
+
+function lightUpRandomProvince() {
+  const available = provinceNames.filter(function(name) {
+    return !litProvinces[name] || litProvinces[name] < 100;
+  });
+  if (available.length === 0) return;
+
+  const randomIndex = Math.floor(Math.random() * available.length);
+  const province = available[randomIndex];
+  
+  litProvinces[province] = (litProvinces[province] || 0) + 1;
+  totalLights++;
+
+  animateNumber('lightCount', totalLights);
+  animateNumber('provinceCount', Object.keys(litProvinces).length);
+
+  if (lightUpChart) {
+    updateLightUpMap();
+  }
+}
+
+function animateNumber(id, target) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  
+  const current = parseInt(el.textContent) || 0;
+  const diff = target - current;
+  const duration = 500;
+  const startTime = performance.now();
+  
+  function update(time) {
+    const elapsed = time - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const val = Math.floor(current + diff * eased);
+    el.textContent = val;
+    
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      el.textContent = target;
+    }
+  }
+  
+  requestAnimationFrame(update);
+}
+
+function showLightUpFallback(container) {
+  container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#666;font-size:14px;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><div>地图加载中...</div><div style="font-size:12px;margin-top:8px;color:#888;">需要联网加载地图数据</div></div>';
+}
+</script>
+
+<!-- Back to Top Button -->
+<button class="back-to-top" id="backToTop" aria-label="回到顶部">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 15l-6-6-6 6"/>
+  </svg>
+</button>
+
+</body>
 </html>
