@@ -941,6 +941,37 @@
     document.getElementById('provinceCount').textContent = Object.keys(litCities).length;
   }
 
+  function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  function findNearestCity(lat, lon) {
+    let minDist = Infinity;
+    let nearestCity = '';
+    for (const [city, coords] of Object.entries(cityCoords)) {
+      const dist = getDistance(lat, lon, coords[1], coords[0]);
+      if (dist < minDist) {
+        minDist = dist;
+        nearestCity = city;
+      }
+    }
+    let province = '';
+    for (const [prov, cities] of Object.entries(cityData)) {
+      if (cities.includes(nearestCity)) {
+        province = prov;
+        break;
+      }
+    }
+    return { city: nearestCity, province, distance: minDist };
+  }
+
   function getLocation() {
     const btn = document.getElementById('getLocationBtn');
     const text = document.getElementById('locationText');
@@ -951,31 +982,30 @@
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const allCities = Object.entries(cityData).flatMap(([prov, cities]) => 
-            cities.map(c => ({ city: c, province: prov }))
-          );
-          const randomCity = allCities[Math.floor(Math.random() * Math.min(50, allCities.length))];
-          currentCity = randomCity.city;
-          currentProvince = randomCity.province;
-          text.textContent = `${currentProvince} · ${currentCity}`;
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          const result = findNearestCity(lat, lon);
+          if (result.city && result.province) {
+            currentCity = result.city;
+            currentProvince = result.province;
+            text.textContent = `${currentProvince} · ${currentCity}`;
+          } else {
+            text.textContent = '定位失败，请手动选择';
+          }
           btn.disabled = false;
           enableLightUpBtn();
         },
-        () => {
-          const allCities = Object.entries(cityData).flatMap(([prov, cities]) => 
-            cities.map(c => ({ city: c, province: prov }))
-          );
-          const randomCity = allCities[Math.floor(Math.random() * Math.min(50, allCities.length))];
-          currentCity = randomCity.city;
-          currentProvince = randomCity.province;
-          text.textContent = `${currentProvince} · ${currentCity}`;
+        (err) => {
+          console.warn('Geolocation error:', err);
+          text.textContent = '定位失败，请手动选择';
           btn.disabled = false;
-          enableLightUpBtn();
+          openCityPicker();
         },
-        { timeout: 8000 }
+        { timeout: 10000, enableHighAccuracy: true }
       );
     } else {
       text.textContent = '点击选择城市';
+      btn.disabled = false;
     }
   }
 
