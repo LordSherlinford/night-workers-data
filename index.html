@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-<script src="https://static.cloudbase.net/cloudbase-js-sdk/2.7.1/cloudbase.full.js"></script>
 <script src="china-map.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -3006,18 +3005,30 @@ window.addEventListener('load', function() {
   setTimeout(initCounters, 300);
   setTimeout(initCursorGlow, 400);
   setTimeout(initLightUpMap, 500);
+
+  // 定时刷新点亮数据（每5秒）
+  setTimeout(function() {
+    setInterval(function() {
+      fetchLightUpData().then(function(ok) {
+        if (ok) {
+          updateLightUpMap();
+          updateLightStats();
+        }
+      });
+    }, 5000);
+  }, 2000);
 });
 
 // Light Up the Night - China Map
 let lightUpChart = null;
 let litProvinces = {};
 let totalLights = 0;
-let cloudbaseApp = null;
-let cloudbaseDb = null;
-let lightUpWatcher = null;
-const CLOUDBASE_ENV = 'night-d3gwx140h359d9590';
-const COLLECTION = 'lightup_data';
-const DOC_ID = 'global';
+const GITHUB_TOKEN = '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';
+const GITHUB_USER = 'LordSherlinford';
+const GITHUB_REPO = 'night-workers-data';
+const DATA_FILE = 'lightup-data.json';
+const GITHUB_API = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${DATA_FILE}`;
+let dataSha = null;
 
 function updateLitDataFromServer(data) {
   if (!data || !data.provinces) return;
@@ -3032,73 +3043,51 @@ function updateLitDataFromServer(data) {
   }
 }
 
-async function startLightUpWatch() {
-  if (lightUpWatcher) return;
-  try {
-    lightUpWatcher = cloudbaseDb.collection(COLLECTION).where({ _id: DOC_ID }).watch({
-      onChange: (snapshot) => {
-        if (snapshot.docs && snapshot.docs.length > 0) {
-          updateLitDataFromServer(snapshot.docs[0]);
-        }
-      },
-      onError: (err) => {
-        console.warn('Light up watch error:', err);
-      }
-    });
-  } catch (e) {
-    console.warn('Failed to start watch:', e);
-  }
-}
-
-async function initCloudBase() {
-  if (cloudbaseDb) return true;
-  try {
-    cloudbaseApp = cloudbase.init({ env: CLOUDBASE_ENV });
-    const auth = cloudbaseApp.auth({ persistence: 'local' });
-    await auth.signInAnonymously();
-    cloudbaseDb = cloudbaseApp.database();
-    startLightUpWatch();
-    return true;
-  } catch (e) {
-    console.warn('CloudBase init failed:', e);
-    return false;
-  }
-}
-
 async function fetchLightUpData() {
   try {
-    const inited = await initCloudBase();
-    if (!inited) return false;
-    const res = await cloudbaseDb.collection(COLLECTION).where({ _id: DOC_ID }).get();
-    if (res.data && res.data.length > 0) {
-      const data = res.data[0];
-      litProvinces = {};
-      for (const [province, info] of Object.entries(data.provinces || {})) {
-        litProvinces[province] = info.count || 0;
+    console.log('[GitHub] Fetching data...');
+    const res = await fetch(GITHUB_API, {
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json'
       }
-      totalLights = data.total || 0;
-      return true;
-    }
-    return false;
+    });
+    if (!res.ok) throw new Error('Failed to fetch');
+    const json = await res.json();
+    dataSha = json.sha;
+    const content = atob(json.content);
+    const data = JSON.parse(content);
+    console.log('[GitHub] Data fetched:', data);
+    updateLitDataFromServer(data);
+    return true;
   } catch (e) {
-    console.warn('Failed to fetch light up data:', e);
+    console.error('[GitHub] Fetch failed:', e);
     return false;
   }
 }
 
 async function sendLightUp(province, city) {
   try {
-    const inited = await initCloudBase();
-    if (!inited) return false;
-    const res = await cloudbaseDb.collection(COLLECTION).where({ _id: DOC_ID }).get();
+    console.log('[LightUp] Sending:', province, city);
     let currentData = { total: 0, provinces: {} };
-    let hasDoc = false;
-    let docId = null;
-    if (res.data && res.data.length > 0) {
-      currentData = res.data[0];
-      hasDoc = true;
-      docId = currentData._id;
+    let sha = null;
+    try {
+      const res = await fetch(GITHUB_API, {
+        headers: {
+          'Authorization': `token ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        sha = json.sha;
+        const content = atob(json.content);
+        currentData = JSON.parse(content);
+      }
+    } catch (e) {
+      console.log('[LightUp] No existing data, starting fresh');
     }
+    
     if (!currentData.provinces) currentData.provinces = {};
     if (!currentData.provinces[province]) {
       currentData.provinces[province] = { count: 0, cities: {} };
@@ -3111,26 +3100,32 @@ async function sendLightUp(province, city) {
     if (city) {
       currentData.provinces[province].cities[city] = (currentData.provinces[province].cities[city] || 0) + 1;
     }
-    if (hasDoc) {
-      await cloudbaseDb.collection(COLLECTION).doc(docId).update({
-        total: currentData.total,
-        provinces: currentData.provinces
-      });
-    } else {
-      await cloudbaseDb.collection(COLLECTION).add({
-        _id: DOC_ID,
-        total: currentData.total,
-        provinces: currentData.provinces
-      });
-    }
-    litProvinces = {};
-    for (const [p, info] of Object.entries(currentData.provinces || {})) {
-      litProvinces[p] = info.count || 0;
-    }
-    totalLights = currentData.total || 0;
+    console.log('[LightUp] New data:', currentData);
+    
+    const newContent = JSON.stringify(currentData, null, 2);
+    const encodedContent = btoa(unescape(encodeURIComponent(newContent)));
+    const saveRes = await fetch(GITHUB_API, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: 'Update light up data',
+        content: encodedContent,
+        sha: sha
+      })
+    });
+    if (!saveRes.ok) throw new Error('Failed to save');
+    const savedJson = await saveRes.json();
+    dataSha = savedJson.content.sha;
+    console.log('[LightUp] Saved successfully!');
+    
+    updateLitDataFromServer(currentData);
     return true;
   } catch (e) {
-    console.warn('Failed to send light up:', e);
+    console.error('[LightUp] Failed:', e);
     return false;
   }
 }

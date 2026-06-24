@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-  <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.7.1/cloudbase.full.js"></script>
   <script src="china-map.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -130,13 +129,13 @@
     }
 
     .loc-icon {
-      width: 44px;
-      height: 44px;
+      width: 56px;
+      height: 56px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: rgba(0, 212, 255, 0.12);
-      border-radius: 10px;
+      border-radius: 14px;
       flex-shrink: 0;
     }
 
@@ -165,16 +164,17 @@
     }
 
     .loc-btn {
-      width: 44px;
-      height: 44px;
+      width: 56px;
+      height: 56px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: linear-gradient(135deg, #00d4ff, #0099cc);
       border: none;
-      border-radius: 10px;
+      border-radius: 14px;
       cursor: pointer;
       flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
     }
 
     .loc-btn:active {
@@ -409,6 +409,97 @@
       font-size: 12px;
       color: #666;
     }
+
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .confirm-overlay.show {
+      display: flex;
+    }
+
+    .confirm-dialog {
+      width: 100%;
+      max-width: 320px;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 24px;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .confirm-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .confirm-content {
+      font-size: 14px;
+      color: #bbb;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .confirm-content .current-city {
+      color: #00d4ff;
+      font-weight: 600;
+    }
+
+    .confirm-content .new-city {
+      color: #ffd700;
+      font-weight: 600;
+    }
+
+    .confirm-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .confirm-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .confirm-btn.cancel {
+      background: rgba(255, 255, 255, 0.08);
+      color: #aaa;
+    }
+
+    .confirm-btn.cancel:active {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .confirm-btn.confirm {
+      background: linear-gradient(135deg, #ffd700, #ffaa00);
+      color: #1a1a2e;
+    }
+
+    .confirm-btn.confirm:active {
+      transform: scale(0.97);
+    }
   </style>
 </head>
 <body>
@@ -441,7 +532,7 @@
   <div class="content">
     <div class="card location-card">
       <div class="loc-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2">
           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
           <circle cx="12" cy="10" r="3"/>
         </svg>
@@ -452,7 +543,7 @@
         <div class="loc-hint">点击修改城市</div>
       </div>
       <button class="loc-btn" id="getLocationBtn" onclick="getLocation()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
           <path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/>
           <circle cx="12" cy="9" r="2.5"/>
         </svg>
@@ -493,6 +584,20 @@
     </div>
     <div class="picker-tabs" id="provinceTabs"></div>
     <div class="picker-cities" id="cityList"></div>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="confirm-overlay" id="confirmOverlay" onclick="closeConfirmOutside(event)">
+  <div class="confirm-dialog" onclick="event.stopPropagation()">
+    <div class="confirm-title">确认更改城市</div>
+    <div class="confirm-content" id="confirmContent">
+      你当前的定位为<span class="current-city">北京</span>，你确定要更改为<span class="new-city">上海</span>吗？
+    </div>
+    <div class="confirm-buttons">
+      <button class="confirm-btn cancel" onclick="cancelCityChange()">取消</button>
+      <button class="confirm-btn confirm" onclick="confirmCityChange()">确定更改</button>
+    </div>
   </div>
 </div>
 
@@ -639,12 +744,12 @@
   let selectedProvince = '广东';
   let searchQuery = '';
 
-  const CLOUDBASE_ENV = 'night-d3gwx140h359d9590';
-  const COLLECTION = 'lightup_data';
-  const DOC_ID = 'global';
-  let cloudbaseApp = null;
-  let cloudbaseDb = null;
-  let lightUpWatcher = null;
+  const GITHUB_TOKEN = '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';
+  const GITHUB_USER = 'LordSherlinford';
+  const GITHUB_REPO = 'night-workers-data';
+  const DATA_FILE = 'lightup-data.json';
+  const GITHUB_API = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${DATA_FILE}`;
+  let dataSha = null;
 
   function updateLitDataFromServer(data) {
     if (!data || !data.provinces) return;
@@ -664,77 +769,54 @@
     if (countEl) countEl.textContent = totalLights;
   }
 
-  async function startLightUpWatch() {
-    if (lightUpWatcher) return;
-    try {
-      lightUpWatcher = cloudbaseDb.collection(COLLECTION).where({ _id: DOC_ID }).watch({
-        onChange: (snapshot) => {
-          if (snapshot.docs && snapshot.docs.length > 0) {
-            updateLitDataFromServer(snapshot.docs[0]);
-          }
-        },
-        onError: (err) => {
-          console.warn('Light up watch error:', err);
-        }
-      });
-    } catch (e) {
-      console.warn('Failed to start watch:', e);
-    }
-  }
-
-  async function initCloudBase() {
-    if (cloudbaseDb) return true;
-    try {
-      cloudbaseApp = cloudbase.init({ env: CLOUDBASE_ENV });
-      const auth = cloudbaseApp.auth({ persistence: 'local' });
-      await auth.signInAnonymously();
-      cloudbaseDb = cloudbaseApp.database();
-      startLightUpWatch();
-      return true;
-    } catch (e) {
-      console.warn('CloudBase init failed:', e);
-      return false;
-    }
-  }
-
   async function fetchLightUpData() {
     try {
-      const inited = await initCloudBase();
-      if (!inited) return false;
-      const res = await cloudbaseDb.collection(COLLECTION).where({ _id: DOC_ID }).get();
-      if (res.data && res.data.length > 0) {
-        const data = res.data[0];
-        litCities = {};
-        totalLights = data.total || 0;
-        for (const [province, info] of Object.entries(data.provinces || {})) {
-          if (info.cities) {
-            for (const [city, count] of Object.entries(info.cities)) {
-              litCities[city] = count;
-            }
-          }
+      console.log('[GitHub] Fetching data...');
+      const res = await fetch(GITHUB_API, {
+        headers: {
+          'Authorization': `token ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json'
         }
-        return true;
-      }
-      return false;
+      });
+      if (!res.ok) throw new Error('Failed to fetch');
+      const json = await res.json();
+      dataSha = json.sha;
+      const content = atob(json.content);
+      const data = JSON.parse(content);
+      console.log('[GitHub] Data fetched:', data);
+      updateLitDataFromServer(data);
+      return true;
     } catch (e) {
-      console.warn('Failed to fetch light up data:', e);
+      console.error('[GitHub] Fetch failed:', e);
       return false;
     }
   }
 
   async function sendLightUp(province, city) {
     try {
-      const inited = await initCloudBase();
-      if (!inited) return false;
-      const res = await cloudbaseDb.collection(COLLECTION).where({ _id: DOC_ID }).get();
+      console.log('[LightUp] Sending:', province, city);
+      // 获取当前数据
       let currentData = { total: 0, provinces: {} };
-      let hasDoc = false;
-      let docId = null;
-      if (res.data && res.data.length > 0) {
-        currentData = res.data[0];
-        hasDoc = true;
-        docId = currentData._id;
+      let sha = null;
+      try {
+        const res = await fetch(GITHUB_API, {
+          headers: {
+            'Authorization': `token ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          sha = json.sha;
+          const content = atob(json.content);
+          currentData = JSON.parse(content);
+        }
+      } catch (e) {
+        console.log('[LightUp] No existing data, starting fresh');
       }
+      console.log('[LightUp] Current data:', currentData);
+      
+      // 更新数据
       if (!currentData.provinces) currentData.provinces = {};
       if (!currentData.provinces[province]) {
         currentData.provinces[province] = { count: 0, cities: {} };
@@ -747,30 +829,34 @@
       if (city) {
         currentData.provinces[province].cities[city] = (currentData.provinces[province].cities[city] || 0) + 1;
       }
-      if (hasDoc) {
-        await cloudbaseDb.collection(COLLECTION).doc(docId).update({
-          total: currentData.total,
-          provinces: currentData.provinces
-        });
-      } else {
-        await cloudbaseDb.collection(COLLECTION).add({
-          _id: DOC_ID,
-          total: currentData.total,
-          provinces: currentData.provinces
-        });
-      }
-      litCities = {};
-      totalLights = currentData.total || 0;
-      for (const [p, info] of Object.entries(currentData.provinces || {})) {
-        if (info.cities) {
-          for (const [c, count] of Object.entries(info.cities)) {
-            litCities[c] = count;
-          }
-        }
-      }
+      console.log('[LightUp] New data:', currentData);
+      
+      // 保存到 GitHub
+      const newContent = JSON.stringify(currentData, null, 2);
+      const encodedContent = btoa(unescape(encodeURIComponent(newContent)));
+      const saveRes = await fetch(GITHUB_API, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `token ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: 'Update light up data',
+          content: encodedContent,
+          sha: sha
+        })
+      });
+      if (!saveRes.ok) throw new Error('Failed to save');
+      const savedJson = await saveRes.json();
+      dataSha = savedJson.content.sha;
+      console.log('[LightUp] Saved successfully!');
+      
+      // 更新本地显示
+      updateLitDataFromServer(currentData);
       return true;
     } catch (e) {
-      console.warn('Failed to send light up:', e);
+      console.error('[LightUp] Failed:', e);
       return false;
     }
   }
@@ -855,13 +941,54 @@
     ).join('');
   }
 
+  let pendingCity = '';
+  let pendingProvince = '';
+
   function selectCity(city, province) {
-    currentCity = city;
-    currentProvince = province;
-    
-    document.getElementById('locationText').textContent = `${province} · ${city}`;
+    if (currentCity && currentCity !== city) {
+      pendingCity = city;
+      pendingProvince = province;
+      showConfirmDialog();
+    } else {
+      currentCity = city;
+      currentProvince = province;
+      document.getElementById('locationText').textContent = `${province} · ${city}`;
+      closeCityPicker();
+      enableLightUpBtn();
+    }
+  }
+
+  function showConfirmDialog() {
+    const content = document.getElementById('confirmContent');
+    content.innerHTML = `你当前的定位为<span class="current-city">${currentCity}</span>，你确定要更改为<span class="new-city">${pendingCity}</span>吗？`;
+    document.getElementById('confirmOverlay').classList.add('show');
+  }
+
+  function closeConfirmDialog() {
+    document.getElementById('confirmOverlay').classList.remove('show');
+    pendingCity = '';
+    pendingProvince = '';
+  }
+
+  function closeConfirmOutside(event) {
+    if (event.target.id === 'confirmOverlay') {
+      closeConfirmDialog();
+    }
+  }
+
+  function cancelCityChange() {
+    closeConfirmDialog();
+  }
+
+  function confirmCityChange() {
+    if (pendingCity && pendingProvince) {
+      currentCity = pendingCity;
+      currentProvince = pendingProvince;
+      document.getElementById('locationText').textContent = `${currentProvince} · ${currentCity}`;
+      enableLightUpBtn();
+    }
+    closeConfirmDialog();
     closeCityPicker();
-    enableLightUpBtn();
   }
 
   function initMap() {
@@ -1100,6 +1227,16 @@
 
   // Initialize
   loadMap();
+
+  // 页面加载后自动获取定位
+  window.addEventListener('load', function() {
+    setTimeout(getLocation, 800);
+  });
+
+  // 定时刷新数据（每5秒）
+  setInterval(function() {
+    fetchLightUpData();
+  }, 5000);
 </script>
 
 </body>
