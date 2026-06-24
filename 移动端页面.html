@@ -638,6 +638,65 @@
   let selectedProvince = '广东';
   let searchQuery = '';
 
+  const LIGHTUP_API_URL = 'https://night-d3gwx140h359d9590.api.tcloudbasegateway.com/v1/ai/cloudbase';
+
+  async function fetchLightUpData() {
+    try {
+      const response = await fetch(LIGHTUP_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get' })
+      });
+      const data = await response.json();
+      if (data && data.provinces) {
+        litCities = {};
+        totalLights = data.total || 0;
+        for (const [province, info] of Object.entries(data.provinces)) {
+          if (info.cities) {
+            for (const [city, count] of Object.entries(info.cities)) {
+              litCities[city] = count;
+            }
+          }
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.warn('Failed to fetch light up data:', e);
+      return false;
+    }
+  }
+
+  async function sendLightUp(province, city) {
+    try {
+      const response = await fetch(LIGHTUP_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'lite', province, city: city || '' })
+      });
+      const data = await response.json();
+      if (data && data.success && data.data) {
+        const d = data.data;
+        litCities = {};
+        totalLights = d.total || 0;
+        if (d.provinces) {
+          for (const [p, info] of Object.entries(d.provinces)) {
+            if (info.cities) {
+              for (const [c, count] of Object.entries(info.cities)) {
+                litCities[c] = count;
+              }
+            }
+          }
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.warn('Failed to send light up:', e);
+      return false;
+    }
+  }
+
   // Get province of a city
   function getProvinceByCity(city) {
     for (const province in cityData) {
@@ -809,21 +868,37 @@
   }
 
   function loadMap() {
+    function setupMap() {
+      initMap();
+      updateStats();
+      fetchLightUpData().then(function(ok) {
+        if (ok) {
+          updateMap();
+          updateStats();
+        }
+      });
+    }
+
     if (typeof CHINA_MAP_DATA !== 'undefined') {
       echarts.registerMap('china', CHINA_MAP_DATA);
-      initMap();
+      setupMap();
     } else {
       fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
         .then(res => res.json())
         .then(geoJson => {
           echarts.registerMap('china', geoJson);
-          initMap();
+          setupMap();
         })
         .catch(err => {
           document.getElementById('map').innerHTML = 
             '<div class="map-loading">地图加载失败，请检查网络连接</div>';
         });
     }
+  }
+
+  function updateStats() {
+    document.getElementById('lightCount').textContent = totalLights;
+    document.getElementById('provinceCount').textContent = Object.keys(litCities).length;
   }
 
   function getLocation() {
@@ -884,14 +959,16 @@
     btn.disabled = true;
     text.textContent = '✨ 点亮中...';
 
-    setTimeout(() => {
-      litCities[currentCity] = (litCities[currentCity] || 0) + 1;
-      totalLights++;
+    litCities[currentCity] = (litCities[currentCity] || 0) + 1;
+    totalLights++;
+    updateStats();
+    updateMap();
 
-      document.getElementById('lightCount').textContent = totalLights;
-      document.getElementById('provinceCount').textContent = Object.keys(litCities).length;
-
-      updateMap();
+    sendLightUp(currentProvince, currentCity).then(function(ok) {
+      if (ok) {
+        updateMap();
+        updateStats();
+      }
 
       text.textContent = '✓ 点亮成功！';
       btn.classList.add('success');
@@ -901,7 +978,16 @@
         btn.disabled = false;
         btn.classList.remove('success');
       }, 1500);
-    }, 600);
+    }).catch(function() {
+      text.textContent = '✓ 点亮成功！';
+      btn.classList.add('success');
+
+      setTimeout(() => {
+        text.textContent = `✨ 再次点亮 ${currentCity}`;
+        btn.disabled = false;
+        btn.classList.remove('success');
+      }, 1500);
+    });
   }
 
   // Initialize
