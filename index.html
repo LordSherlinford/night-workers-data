@@ -3041,12 +3041,12 @@ function simulateNewLight() {
 }
 
 function startMockSimulation() {
-  setInterval(function() {
-    if (Math.random() < 1/6) {
-      simulateNewLight();
-    }
-  }, 10000);
-}
+    setInterval(function() {
+      if (Math.random() < 1/150) {
+        simulateNewLight();
+      }
+    }, 500);
+  }
 
 async function fetchLightUpData() {
   return true;

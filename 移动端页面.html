@@ -784,10 +784,10 @@
 
   function startMockSimulation() {
     setInterval(function() {
-      if (Math.random() < 1/6) {
+      if (Math.random() < 1/150) {
         simulateNewLight();
       }
-    }, 10000);
+    }, 500);
   }
 
   async function fetchLightUpData() {
