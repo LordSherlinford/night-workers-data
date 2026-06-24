@@ -1063,10 +1063,15 @@ body {
   justify-content: center;
   font-size: 48px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  overflow: hidden;
 }
-.qr-icon::before {
-  content: '📱';
-  font-size: 48px;
+.qr-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.qr-image {
+  display: none;
 }
 .qr-title {
   font-size: 18px;
@@ -1927,8 +1932,29 @@ body {
         <div class="qr-card">
           <div class="qr-glow"></div>
           <div class="qr-icon" id="qrIcon">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://lordsherlinford.github.io/night-workers-data/?mobile=true" alt="扫码参与点亮黑夜公益活动" style="width:100%;height:100%;border-radius:12px;"/>
-          </div>
+              <svg class="qr-placeholder" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <!-- QR Code Placeholder Pattern -->
+                <rect x="10" y="10" width="30" height="30" fill="#16233e" stroke="#ffd700" stroke-width="2"/>
+                <rect x="80" y="10" width="30" height="30" fill="#16233e" stroke="#ffd700" stroke-width="2"/>
+                <rect x="10" y="80" width="30" height="30" fill="#16233e" stroke="#ffd700" stroke-width="2"/>
+                <rect x="15" y="15" width="20" height="20" fill="#ffd700"/>
+                <rect x="85" y="15" width="20" height="20" fill="#ffd700"/>
+                <rect x="15" y="85" width="20" height="20" fill="#ffd700"/>
+                <!-- Data Pattern Dots -->
+                <circle cx="55" cy="25" r="3" fill="#00d4ff"/>
+                <circle cx="65" cy="25" r="3" fill="#00d4ff"/>
+                <circle cx="55" cy="45" r="3" fill="#00d4ff"/>
+                <circle cx="65" cy="45" r="3" fill="#e94560"/>
+                <circle cx="25" cy="55" r="3" fill="#ffd700"/>
+                <circle cx="45" cy="65" r="3" fill="#ffd700"/>
+                <circle cx="85" cy="55" r="3" fill="#00d4ff"/>
+                <circle cx="95" cy="65" r="3" fill="#e94560"/>
+                <circle cx="55" cy="85" r="3" fill="#ffd700"/>
+                <circle cx="65" cy="95" r="3" fill="#00d4ff"/>
+                <circle cx="85" cy="85" r="3" fill="#ffd700"/>
+              </svg>
+              <img class="qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://lordsherlinford.github.io/night-workers-data/?mobile=true" alt="扫码参与点亮" style="width:100%;height:100%;border-radius:12px;" onerror="this.style.display='none';this.previousElementSibling.style.display='block';"/>
+            </div>
           <div class="qr-title">扫码参与点亮</div>
           <div class="qr-desc">每一次扫码，点亮一座城</div>
           <button class="light-btn" onclick="lightUpRandomProvince()">
@@ -3219,7 +3245,7 @@ function animateNumber(id, target) {
 }
 
 function showLightUpFallback(container) {
-  container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#666;font-size:14px;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><div>地图加载中...</div><div style="font-size:12px;margin-top:8px;color:#888;">需要联网加载地图数据</div></div>';
+  container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#888;font-size:14px;gap:12px;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><div style="font-weight:600;color:#fff;">需要连接互联网</div><div style="font-size:12px;">地图数据需要从云端加载</div><div style="font-size:11px;margin-top:8px;">请检查网络连接后刷新页面</div></div>';
 }
 </script>
 
