@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.7.1/cloudbase.full.js"></script>
   <script src="china-map.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -638,20 +639,36 @@
   let selectedProvince = '广东';
   let searchQuery = '';
 
-  const LIGHTUP_API_URL = 'https://night-d3gwx140h359d9590-1446902383.ap-shanghai.app.tcloudbase.com/lightup';
+  const CLOUDBASE_ENV = 'night-d3gwx140h359d9590';
+  const COLLECTION = 'lightup_data';
+  const DOC_ID = 'global';
+  let cloudbaseApp = null;
+  let cloudbaseDb = null;
+
+  async function initCloudBase() {
+    if (cloudbaseDb) return true;
+    try {
+      cloudbaseApp = cloudbase.init({ env: CLOUDBASE_ENV });
+      const auth = cloudbaseApp.auth({ persistence: 'local' });
+      await auth.signInAnonymously();
+      cloudbaseDb = cloudbaseApp.database();
+      return true;
+    } catch (e) {
+      console.warn('CloudBase init failed:', e);
+      return false;
+    }
+  }
 
   async function fetchLightUpData() {
     try {
-      const response = await fetch(LIGHTUP_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get' })
-      });
-      const data = await response.json();
-      if (data && data.provinces) {
+      const inited = await initCloudBase();
+      if (!inited) return false;
+      const res = await cloudbaseDb.collection(COLLECTION).where({ _id: DOC_ID }).get();
+      if (res.data && res.data.length > 0) {
+        const data = res.data[0];
         litCities = {};
         totalLights = data.total || 0;
-        for (const [province, info] of Object.entries(data.provinces)) {
+        for (const [province, info] of Object.entries(data.provinces || {})) {
           if (info.cities) {
             for (const [city, count] of Object.entries(info.cities)) {
               litCities[city] = count;
@@ -669,28 +686,51 @@
 
   async function sendLightUp(province, city) {
     try {
-      const response = await fetch(LIGHTUP_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'lite', province, city: city || '' })
-      });
-      const data = await response.json();
-      if (data && data.success && data.data) {
-        const d = data.data;
-        litCities = {};
-        totalLights = d.total || 0;
-        if (d.provinces) {
-          for (const [p, info] of Object.entries(d.provinces)) {
-            if (info.cities) {
-              for (const [c, count] of Object.entries(info.cities)) {
-                litCities[c] = count;
-              }
-            }
+      const inited = await initCloudBase();
+      if (!inited) return false;
+      const res = await cloudbaseDb.collection(COLLECTION).where({ _id: DOC_ID }).get();
+      let currentData = { total: 0, provinces: {} };
+      let hasDoc = false;
+      let docId = null;
+      if (res.data && res.data.length > 0) {
+        currentData = res.data[0];
+        hasDoc = true;
+        docId = currentData._id;
+      }
+      if (!currentData.provinces) currentData.provinces = {};
+      if (!currentData.provinces[province]) {
+        currentData.provinces[province] = { count: 0, cities: {} };
+      }
+      if (!currentData.provinces[province].cities) {
+        currentData.provinces[province].cities = {};
+      }
+      currentData.total = (currentData.total || 0) + 1;
+      currentData.provinces[province].count = currentData.provinces[province].count + 1;
+      if (city) {
+        currentData.provinces[province].cities[city] = (currentData.provinces[province].cities[city] || 0) + 1;
+      }
+      if (hasDoc) {
+        await cloudbaseDb.collection(COLLECTION).doc(docId).update({
+          total: currentData.total,
+          provinces: currentData.provinces
+        });
+      } else {
+        await cloudbaseDb.collection(COLLECTION).add({
+          _id: DOC_ID,
+          total: currentData.total,
+          provinces: currentData.provinces
+        });
+      }
+      litCities = {};
+      totalLights = currentData.total || 0;
+      for (const [p, info] of Object.entries(currentData.provinces || {})) {
+        if (info.cities) {
+          for (const [c, count] of Object.entries(info.cities)) {
+            litCities[c] = count;
           }
         }
-        return true;
       }
-      return false;
+      return true;
     } catch (e) {
       console.warn('Failed to send light up:', e);
       return false;
