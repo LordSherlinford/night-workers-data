@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>点亮黑夜 - 移动端</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #0a0a12 0%, #1a1a2e 50%, #0a0a12 100%);
+      color: #e0e0e0;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .mobile-page {
+      width: 100%;
+      min-height: 100vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .cover {
+      min-height: 55vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 30px 20px;
+    }
+
+    .cover-bg {
+      position: absolute;
+      inset: 0;
+      background: 
+        radial-gradient(ellipse at 50% 0%, rgba(233, 69, 96, 0.2) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(255, 215, 0, 0.15) 0%, transparent 50%);
+    }
+
+    .cover-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(233, 69, 96, 0.15));
+      border: 2px solid rgba(255, 215, 0, 0.4);
+      border-radius: 50%;
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); }
+      50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.6); }
+    }
+
+    .title {
+      font-size: 36px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #ffd700, #e94560);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 24px;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 900;
+      color: #fff;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .content {
+      padding: 20px;
+      padding-bottom: 40px;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: linear-gradient(135deg, rgba(22, 33, 62, 0.9), rgba(22, 33, 62, 0.5));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .location-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .loc-icon {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 212, 255, 0.12);
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+
+    .loc-text {
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .loc-title {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 2px;
+    }
+
+    .loc-desc {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .loc-hint {
+      font-size: 11px;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .loc-btn {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #00d4ff, #0099cc);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .loc-btn:active {
+      transform: scale(0.95);
+    }
+
+    .city-picker-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .city-picker-overlay.show {
+      display: flex;
+    }
+
+    .city-picker {
+      width: 100%;
+      max-width: 480px;
+      background: #1a1a2e;
+      border-radius: 20px 20px 0 0;
+      max-height: 70vh;
+      display: flex;
+      flex-direction: column;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .picker-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .picker-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .picker-close {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    .picker-search {
+      padding: 12px 16px;
+    }
+
+    .picker-search input {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .picker-search input::placeholder {
+      color: #666;
+    }
+
+    .picker-search input:focus {
+      border-color: rgba(0, 212, 255, 0.5);
+    }
+
+    .picker-tabs {
+      display: flex;
+      padding: 0 16px;
+      gap: 8px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .picker-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .picker-tab {
+      padding: 6px 14px;
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      border-radius: 16px;
+      color: #888;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+
+    .picker-tab.active {
+      background: rgba(0, 212, 255, 0.2);
+      color: #00d4ff;
+    }
+
+    .picker-cities {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .city-item {
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .city-item:active {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .city-name {
+      font-size: 15px;
+      color: #fff;
+    }
+
+    .city-province {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .city-item.selected {
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+    }
+
+    .city-item.selected .city-name {
+      color: #ffd700;
+    }
+
+    .no-result {
+      text-align: center;
+      padding: 40px 20px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 16px;
+      background: rgba(233, 69, 96, 0.2);
+      border: 2px solid rgba(233, 69, 96, 0.3);
+      border-radius: 12px;
+      color: #888;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: not-allowed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+    }
+
+    .action-btn.active {
+      background: linear-gradient(135deg, #e94560, #c73e54);
+      border-color: #e94560;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+    }
+
+    .action-btn.active:active {
+      transform: scale(0.98);
+    }
+
+    .action-btn.success {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-color: #10b981;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .map-card {
+      padding: 12px;
+    }
+
+    .map-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #fff;
+      text-align: center;
+    }
+
+    #map {
+      width: 100%;
+      height: 280px;
+    }
+
+    .map-loading {
+      width: 100%;
+      height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #888;
+      font-size: 14px;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+
+<div class="mobile-page">
+  <div class="cover">
+    <div class="cover-bg"></div>
+    <div class="cover-content">
+      <div class="logo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="1.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+      </div>
+      <h1 class="title">点亮黑夜</h1>
+      <p class="subtitle">关注夜间劳动者 · 传递城市温暖</p>
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-value" id="lightCount">0</span>
+          <span class="stat-label">次点亮</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="provinceCount">0</span>
+          <span class="stat-label">座城市</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="card location-card">
+      <div class="loc-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2">
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+      </div>
+      <div class="loc-text" onclick="openCityPicker()">
+        <div class="loc-title">当前城市</div>
+        <div class="loc-desc" id="locationText">点击选择所在城市</div>
+        <div class="loc-hint">点击修改城市</div>
+      </div>
+      <button class="loc-btn" id="getLocationBtn" onclick="getLocation()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+          <path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/>
+          <circle cx="12" cy="9" r="2.5"/>
+        </svg>
+      </button>
+    </div>
+
+    <button class="action-btn" id="lightUpBtn" onclick="lightUp()" disabled>
+      <span id="actionText">✨ 获取定位后点亮</span>
+    </button>
+
+    <div class="card map-card">
+      <div class="map-title">中国地图 · 点亮分布</div>
+      <div id="map">
+        <div class="map-loading">地图加载中...</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>点亮黑夜 · 关注夜间劳动者权益</p>
+    </div>
+  </div>
+</div>
+
+<!-- City Picker -->
+<div class="city-picker-overlay" id="cityPickerOverlay" onclick="closeCityPickerOutside(event)">
+  <div class="city-picker" onclick="event.stopPropagation()">
+    <div class="picker-header">
+      <div class="picker-title">选择城市</div>
+      <button class="picker-close" onclick="closeCityPicker()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18"/>
+          <path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="picker-search">
+      <input type="text" id="citySearch" placeholder="搜索城市名称..." oninput="searchCities(this.value)"/>
+    </div>
+    <div class="picker-tabs" id="provinceTabs"></div>
+    <div class="picker-cities" id="cityList"></div>
+  </div>
+</div>
+
+<script>
+  // City data - major cities by province
+  const cityData = {
+    '北京': ['北京'],
+    '天津': ['天津'],
+    '上海': ['上海'],
+    '重庆': ['重庆'],
+    '河北': ['石家庄', '唐山', '秦皇岛', '邯郸', '邢台', '保定', '张家口', '承德', '沧州', '廊坊', '衡水'],
+    '山西': ['太原', '大同', '阳泉', '长治', '晋城', '朔州', '晋中', '运城', '忻州', '临汾', '吕梁'],
+    '内蒙古': ['呼和浩特', '包头', '乌海', '赤峰', '通辽', '鄂尔多斯', '呼伦贝尔', '巴彦淖尔', '乌兰察布'],
+    '辽宁': ['沈阳', '大连', '鞍山', '抚顺', '本溪', '丹东', '锦州', '营口', '阜新', '辽阳', '盘锦', '铁岭', '朝阳', '葫芦岛'],
+    '吉林': ['长春', '吉林', '四平', '辽源', '通化', '白山', '松原', '白城'],
+    '黑龙江': ['哈尔滨', '齐齐哈尔', '牡丹江', '佳木斯', '大庆', '伊春', '鸡西', '鹤岗', '双鸭山', '七台河', '绥化', '黑河'],
+    '江苏': ['南京', '苏州', '无锡', '常州', '镇江', '扬州', '泰州', '南通', '盐城', '淮安', '连云港', '徐州', '宿迁'],
+    '浙江': ['杭州', '宁波', '温州', '嘉兴', '湖州', '绍兴', '金华', '衢州', '舟山', '台州', '丽水'],
+    '安徽': ['合肥', '芜湖', '蚌埠', '淮南', '马鞍山', '淮北', '铜陵', '安庆', '黄山', '滁州', '阜阳', '宿州', '六安', '亳州', '池州', '宣城'],
+    '福建': ['福州', '厦门', '莆田', '三明', '泉州', '漳州', '南平', '龙岩', '宁德'],
+    '江西': ['南昌', '景德镇', '萍乡', '九江', '新余', '鹰潭', '赣州', '吉安', '宜春', '抚州', '上饶'],
+    '山东': ['济南', '青岛', '淄博', '枣庄', '东营', '烟台', '潍坊', '济宁', '泰安', '威海', '日照', '滨州', '德州', '聊城', '临沂', '菏泽', '莱芜'],
+    '河南': ['郑州', '开封', '洛阳', '平顶山', '安阳', '鹤壁', '新乡', '焦作', '濮阳', '许昌', '漯河', '三门峡', '南阳', '商丘', '信阳', '周口', '驻马店', '济源'],
+    '湖北': ['武汉', '黄石', '十堰', '宜昌', '襄阳', '鄂州', '荆门', '孝感', '荆州', '黄冈', '咸宁', '随州', '恩施'],
+    '湖南': ['长沙', '株洲', '湘潭', '衡阳', '邵阳', '岳阳', '常德', '张家界', '益阳', '郴州', '永州', '怀化', '娄底'],
+    '广东': ['广州', '深圳', '珠海', '汕头', '韶关', '佛山', '江门', '湛江', '茂名', '肇庆', '惠州', '梅州', '汕尾', '河源', '阳江', '清远', '东莞', '中山', '潮州', '揭阳', '云浮'],
+    '广西': ['南宁', '柳州', '桂林', '梧州', '北海', '防城港', '钦州', '贵港', '玉林', '百色', '贺州', '河池', '来宾', '崇左'],
+    '海南': ['海口', '三亚', '三沙', '儋州'],
+    '四川': ['成都', '自贡', '攀枝花', '泸州', '德阳', '绵阳', '广元', '遂宁', '内江', '乐山', '南充', '眉山', '宜宾', '广安', '达州', '雅安', '巴中', '资阳'],
+    '贵州': ['贵阳', '六盘水', '遵义', '安顺', '毕节', '铜仁'],
+    '云南': ['昆明', '曲靖', '玉溪', '保山', '昭通', '丽江', '普洱', '临沧'],
+    '西藏': ['拉萨', '日喀则', '昌都', '林芝', '山南', '那曲', '阿里'],
+    '陕西': ['西安', '铜川', '宝鸡', '咸阳', '渭南', '延安', '汉中', '榆林', '安康', '商洛'],
+    '甘肃': ['兰州', '嘉峪关', '金昌', '白银', '天水', '武威', '张掖', '平凉', '酒泉', '庆阳', '定西', '陇南'],
+    '青海': ['西宁', '海东'],
+    '宁夏': ['银川', '石嘴山', '吴忠', '固原', '中卫'],
+    '新疆': ['乌鲁木齐', '克拉玛依', '吐鲁番', '哈密'],
+    '台湾': ['台北', '高雄', '台中', '台南', '新北', '桃园', '基隆', '新竹', '嘉义'],
+    '香港': ['香港'],
+    '澳门': ['澳门']
+  };
+
+  // City coordinates
+  const cityCoords = {
+    '北京': [116.4, 39.9], '天津': [117.2, 39.1], '上海': [121.5, 31.2], '重庆': [106.5, 29.5],
+    '石家庄': [114.5, 38.0], '唐山': [118.2, 39.6], '秦皇岛': [119.6, 39.9], '邯郸': [114.5, 36.6],
+    '保定': [115.5, 38.9], '张家口': [114.9, 40.8], '承德': [117.9, 40.9], '沧州': [116.8, 38.3],
+    '廊坊': [116.7, 39.5], '衡水': [115.7, 37.7], '邢台': [114.5, 37.1],
+    '太原': [112.5, 37.9], '大同': [113.3, 40.1], '阳泉': [113.6, 37.9], '长治': [113.1, 36.2],
+    '晋城': [112.8, 35.5], '朔州': [112.4, 39.3], '晋中': [112.7, 37.7], '运城': [111.0, 35.0],
+    '忻州': [112.7, 38.4], '临汾': [111.5, 36.1], '吕梁': [111.1, 37.5],
+    '呼和浩特': [111.7, 40.8], '包头': [109.8, 40.7], '乌海': [106.8, 39.7], '赤峰': [118.9, 42.3],
+    '通辽': [122.3, 43.6], '鄂尔多斯': [109.8, 39.6], '呼伦贝尔': [119.8, 49.2],
+    '巴彦淖尔': [107.4, 40.7], '乌兰察布': [113.1, 41.0],
+    '沈阳': [123.4, 41.8], '大连': [121.6, 38.9], '鞍山': [122.9, 41.1], '抚顺': [123.9, 41.9],
+    '本溪': [123.8, 41.3], '丹东': [124.4, 40.1], '锦州': [121.1, 41.1], '营口': [122.2, 40.7],
+    '阜新': [121.7, 42.0], '辽阳': [123.2, 41.3], '盘锦': [122.1, 41.1], '铁岭': [123.8, 42.3],
+    '朝阳': [120.5, 41.6], '葫芦岛': [120.8, 40.7],
+    '长春': [125.3, 43.9], '吉林': [126.6, 43.8], '四平': [124.4, 43.2], '辽源': [125.1, 42.9],
+    '通化': [125.9, 41.7], '白山': [126.4, 41.9], '松原': [124.8, 45.1], '白城': [122.8, 45.6],
+    '哈尔滨': [126.6, 45.8], '齐齐哈尔': [123.9, 47.4], '牡丹江': [129.6, 44.6],
+    '佳木斯': [130.4, 46.8], '大庆': [125.1, 46.6], '伊春': [128.9, 47.7],
+    '鸡西': [131.0, 45.3], '鹤岗': [130.3, 47.3], '双鸭山': [131.2, 46.6],
+    '七台河': [131.0, 45.8], '绥化': [126.9, 46.6], '黑河': [127.5, 50.2],
+    '南京': [118.8, 32.1], '苏州': [120.6, 31.3], '无锡': [120.3, 31.6], '常州': [119.9, 31.8],
+    '镇江': [119.4, 32.2], '扬州': [119.4, 32.4], '泰州': [119.9, 32.5], '南通': [120.9, 32.0],
+    '盐城': [120.1, 33.4], '淮安': [119.0, 33.6], '连云港': [119.2, 34.6], '徐州': [117.2, 34.3],
+    '宿迁': [118.3, 33.9],
+    '杭州': [120.2, 30.3], '宁波': [121.5, 29.9], '温州': [120.7, 28.0], '嘉兴': [120.8, 30.7],
+    '湖州': [120.1, 30.9], '绍兴': [120.6, 30.0], '金华': [119.6, 29.1], '衢州': [118.9, 28.9],
+    '舟山': [122.2, 30.0], '台州': [121.4, 28.7], '丽水': [119.9, 28.5],
+    '合肥': [117.3, 31.8], '芜湖': [118.4, 31.3], '蚌埠': [117.3, 32.9], '淮南': [117.0, 32.6],
+    '马鞍山': [118.5, 31.7], '淮北': [116.8, 33.9], '铜陵': [117.8, 30.9], '安庆': [117.1, 30.5],
+    '黄山': [118.3, 29.7], '滁州': [118.3, 32.3], '阜阳': [115.8, 32.9], '宿州': [116.9, 33.6],
+    '六安': [116.5, 31.7], '亳州': [115.8, 33.9], '池州': [117.5, 30.7], '宣城': [118.8, 30.9],
+    '福州': [119.3, 26.1], '厦门': [118.1, 24.5], '莆田': [119.0, 25.4], '三明': [117.6, 26.3],
+    '泉州': [118.7, 24.9], '漳州': [117.6, 24.5], '南平': [118.2, 26.6], '龙岩': [117.0, 25.1],
+    '宁德': [119.5, 26.7],
+    '南昌': [115.9, 28.7], '景德镇': [117.2, 29.3], '萍乡': [113.9, 27.6], '九江': [115.9, 29.7],
+    '新余': [114.9, 27.8], '鹰潭': [117.0, 28.2], '赣州': [114.9, 25.8], '吉安': [115.0, 27.1],
+    '宜春': [114.4, 27.8], '抚州': [116.3, 27.9], '上饶': [117.9, 28.4],
+    '济南': [117.0, 36.7], '青岛': [120.4, 36.1], '淄博': [118.0, 36.8], '枣庄': [117.6, 34.6],
+    '东营': [118.7, 37.4], '烟台': [121.4, 37.5], '潍坊': [119.1, 36.7], '济宁': [116.6, 35.4],
+    '泰安': [117.1, 36.2], '威海': [122.1, 37.5], '日照': [119.5, 35.4], '滨州': [117.9, 37.4],
+    '德州': [116.3, 37.4], '聊城': [115.9, 36.5], '临沂': [118.3, 35.1], '菏泽': [115.4, 35.2],
+    '莱芜': [117.7, 36.2],
+    '郑州': [113.6, 34.8], '开封': [114.3, 34.8], '洛阳': [112.4, 34.7], '平顶山': [113.2, 33.7],
+    '安阳': [114.4, 36.1], '鹤壁': [114.3, 35.7], '新乡': [113.9, 35.3], '焦作': [113.2, 35.2],
+    '濮阳': [115.0, 35.8], '许昌': [113.9, 34.0], '漯河': [114.0, 33.6], '三门峡': [111.2, 34.8],
+    '南阳': [112.5, 33.0], '商丘': [115.7, 34.4], '信阳': [114.1, 32.1], '周口': [114.6, 33.6],
+    '驻马店': [114.0, 33.0], '济源': [112.6, 35.1],
+    '武汉': [114.3, 30.6], '黄石': [115.0, 30.2], '十堰': [110.8, 32.6], '宜昌': [111.3, 30.7],
+    '襄阳': [112.1, 32.0], '鄂州': [114.9, 30.4], '荆门': [112.2, 31.0], '孝感': [113.9, 30.9],
+    '荆州': [112.2, 30.3], '黄冈': [114.9, 30.4], '咸宁': [114.3, 29.8], '随州': [113.4, 31.7],
+    '恩施': [109.5, 30.3],
+    '长沙': [112.9, 28.2], '株洲': [113.1, 27.8], '湘潭': [112.9, 27.9], '衡阳': [112.6, 26.9],
+    '邵阳': [111.5, 27.2], '岳阳': [113.1, 29.4], '常德': [111.7, 29.0], '张家界': [110.5, 29.1],
+    '益阳': [112.4, 28.6], '郴州': [113.0, 25.8], '永州': [111.6, 26.4], '怀化': [109.9, 27.6],
+    '娄底': [112.0, 27.7],
+    '广州': [113.3, 23.1], '深圳': [114.1, 22.5], '珠海': [113.6, 22.3], '汕头': [116.7, 23.4],
+    '韶关': [113.6, 24.8], '佛山': [113.1, 23.0], '江门': [113.1, 22.6], '湛江': [110.4, 21.3],
+    '茂名': [110.9, 21.7], '肇庆': [112.5, 23.1], '惠州': [114.4, 23.1], '梅州': [116.1, 24.3],
+    '汕尾': [115.4, 22.8], '河源': [114.7, 23.7], '阳江': [111.9, 21.9], '清远': [113.1, 23.7],
+    '东莞': [113.7, 23.0], '中山': [113.4, 22.5], '潮州': [116.6, 23.7], '揭阳': [116.4, 23.5],
+    '云浮': [112.0, 22.9],
+    '南宁': [108.3, 22.8], '柳州': [109.4, 24.3], '桂林': [110.3, 25.3], '梧州': [111.3, 23.5],
+    '北海': [109.1, 21.5], '防城港': [108.3, 21.7], '钦州': [108.6, 22.0], '贵港': [109.6, 23.1],
+    '玉林': [110.2, 22.6], '百色': [106.6, 23.9], '贺州': [111.5, 24.4], '河池': [108.1, 24.7],
+    '来宾': [109.2, 23.7], '崇左': [107.4, 22.4],
+    '海口': [110.3, 20.0], '三亚': [109.5, 18.3], '三沙': [112.3, 16.8], '儋州': [109.6, 19.5],
+    '成都': [104.1, 30.7], '自贡': [104.8, 29.3], '攀枝花': [101.7, 26.6], '泸州': [105.4, 28.9],
+    '德阳': [104.4, 31.1], '绵阳': [104.7, 31.5], '广元': [105.8, 32.4], '遂宁': [105.6, 30.5],
+    '内江': [105.1, 29.6], '乐山': [103.8, 29.6], '南充': [106.1, 30.8], '眉山': [103.8, 30.1],
+    '宜宾': [104.6, 28.8], '广安': [106.6, 30.5], '达州': [107.5, 31.2], '雅安': [103.0, 29.9],
+    '巴中': [106.7, 31.9], '资阳': [104.6, 30.1],
+    '贵阳': [106.7, 26.6], '六盘水': [104.8, 26.6], '遵义': [106.9, 27.7], '安顺': [105.9, 26.2],
+    '毕节': [105.3, 27.3], '铜仁': [109.2, 27.7],
+    '昆明': [102.7, 25.0], '曲靖': [103.8, 25.5], '玉溪': [102.5, 24.4], '保山': [99.2, 25.1],
+    '昭通': [103.7, 27.3], '丽江': [100.2, 26.9], '普洱': [100.9, 22.8], '临沧': [100.1, 23.9],
+    '拉萨': [91.1, 29.6], '日喀则': [88.9, 29.3], '昌都': [97.2, 31.1], '林芝': [94.4, 29.6],
+    '山南': [91.8, 29.2], '那曲': [92.1, 31.5], '阿里': [80.1, 32.5],
+    '西安': [108.9, 34.3], '铜川': [109.0, 35.1], '宝鸡': [107.1, 34.4], '咸阳': [108.7, 34.3],
+    '渭南': [109.5, 34.5], '延安': [109.5, 36.6], '汉中': [107.0, 33.1], '榆林': [109.7, 38.3],
+    '安康': [109.0, 32.7], '商洛': [109.9, 33.9],
+    '兰州': [103.8, 36.1], '嘉峪关': [98.3, 39.8], '金昌': [102.2, 38.5], '白银': [104.1, 36.5],
+    '天水': [105.7, 34.6], '武威': [102.6, 37.9], '张掖': [100.5, 38.9], '平凉': [106.7, 35.5],
+    '酒泉': [98.5, 39.7], '庆阳': [107.6, 35.7], '定西': [104.6, 35.6], '陇南': [104.9, 33.4],
+    '西宁': [101.8, 36.6], '海东': [102.1, 36.5],
+    '银川': [106.3, 38.5], '石嘴山': [106.4, 39.0], '吴忠': [106.2, 37.9], '固原': [106.3, 36.0],
+    '中卫': [105.2, 37.5],
+    '乌鲁木齐': [87.6, 43.8], '克拉玛依': [84.9, 45.6], '吐鲁番': [89.2, 42.9], '哈密': [93.5, 42.8],
+    '台北': [121.5, 25.0], '高雄': [120.3, 22.6], '台中': [120.7, 24.1], '台南': [120.2, 23.0],
+    '新北': [121.5, 25.0], '桃园': [121.2, 24.9], '基隆': [121.7, 25.1], '新竹': [120.9, 24.8],
+    '嘉义': [120.4, 23.5], '香港': [114.2, 22.3], '澳门': [113.5, 22.2]
+  };
+
+  const provinces = Object.keys(cityData);
+
+  let litCities = {};
+  let totalLights = 0;
+  let currentCity = '';
+  let currentProvince = '';
+  let mapChart = null;
+  let selectedProvince = '广东';
+  let searchQuery = '';
+
+  // Get province of a city
+  function getProvinceByCity(city) {
+    for (const province in cityData) {
+      if (cityData[province].includes(city)) {
+        return province;
+      }
+    }
+    return null;
+  }
+
+  // City picker functions
+  function openCityPicker() {
+    const overlay = document.getElementById('cityPickerOverlay');
+    overlay.classList.add('show');
+    renderProvinceTabs();
+    renderCityList();
+  }
+
+  function closeCityPicker() {
+    const overlay = document.getElementById('cityPickerOverlay');
+    overlay.classList.remove('show');
+  }
+
+  function closeCityPickerOutside(event) {
+    if (event.target.id === 'cityPickerOverlay') {
+      closeCityPicker();
+    }
+  }
+
+  function renderProvinceTabs() {
+    const tabsContainer = document.getElementById('provinceTabs');
+    tabsContainer.innerHTML = provinces.map(p => 
+      `<button class="picker-tab ${p === selectedProvince ? 'active' : ''}" onclick="selectProvince('${p}')">${p}</button>`
+    ).join('');
+  }
+
+  function selectProvince(province) {
+    selectedProvince = province;
+    searchQuery = '';
+    document.getElementById('citySearch').value = '';
+    renderProvinceTabs();
+    renderCityList();
+  }
+
+  function searchCities(query) {
+    searchQuery = query;
+    renderCityList();
+  }
+
+  function renderCityList() {
+    const listContainer = document.getElementById('cityList');
+    let cities = [];
+
+    if (searchQuery) {
+      // Search across all provinces
+      for (const province in cityData) {
+        cityData[province].forEach(city => {
+          if (city.includes(searchQuery) || province.includes(searchQuery)) {
+            cities.push({ city, province });
+          }
+        });
+      }
+    } else {
+      // Show cities of selected province
+      cities = cityData[selectedProvince].map(c => ({ city: c, province: selectedProvince }));
+    }
+
+    if (cities.length === 0) {
+      listContainer.innerHTML = '<div class="no-result">未找到匹配的城市</div>';
+      return;
+    }
+
+    listContainer.innerHTML = cities.map(c => 
+      `<div class="city-item ${c.city === currentCity ? 'selected' : ''}" onclick="selectCity('${c.city}', '${c.province}')">
+        <div class="city-name">${c.city}</div>
+        <div class="city-province">${c.province}</div>
+      </div>`
+    ).join('');
+  }
+
+  function selectCity(city, province) {
+    currentCity = city;
+    currentProvince = province;
+    
+    document.getElementById('locationText').textContent = `${province} · ${city}`;
+    closeCityPicker();
+    enableLightUpBtn();
+  }
+
+  function initMap() {
+    const mapDom = document.getElementById('map');
+    if (!mapDom) return;
+
+    mapChart = echarts.init(mapDom);
+
+    const scatterData = Object.keys(litCities).map(name => ({
+      name: name,
+      value: [...(cityCoords[name] || [0, 0]), litCities[name]]
+    })).filter(d => d.value[0] > 0);
+
+    const option = {
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: 'rgba(22, 33, 62, 0.95)',
+        borderColor: 'rgba(255, 215, 0, 0.3)',
+        textStyle: { color: '#fff', fontSize: 12 },
+        formatter: function(params) {
+          const count = params.value && params.value[2] ? params.value[2] : 0;
+          const status = count > 0 ? '已点亮' : '未点亮';
+          const color = count > 0 ? '#ffd700' : '#888';
+          return `<div style="font-weight:bold;">${params.name}</div>
+                  <div style="color:${color};">${status}: ${count} 次</div>`;
+        }
+      },
+      geo: {
+        map: 'china',
+        roam: false,
+        zoom: 1.1,
+        center: [104, 35],
+        itemStyle: {
+          areaColor: 'rgba(255, 255, 255, 0.05)',
+          borderColor: 'rgba(255, 215, 0, 0.15)',
+          borderWidth: 1
+        },
+        emphasis: {
+          itemStyle: {
+            areaColor: 'rgba(255, 215, 0, 0.3)'
+          },
+          label: { show: false }
+        }
+      },
+      series: [{
+        type: 'effectScatter',
+        coordinateSystem: 'geo',
+        data: scatterData,
+        symbolSize: function(val) {
+          return 5 + (val[2] || 0) * 0.2;
+        },
+        rippleEffect: {
+          brushType: 'fill',
+          scale: 3,
+          period: 3
+        },
+        itemStyle: {
+          color: '#ffd700',
+          shadowBlur: 10,
+          shadowColor: 'rgba(255, 215, 0, 0.6)'
+        },
+        animation: true
+      }]
+    };
+
+    mapChart.setOption(option);
+  }
+
+  function updateMap() {
+    if (!mapChart) return;
+
+    const scatterData = Object.keys(litCities).map(name => ({
+      name: name,
+      value: [...(cityCoords[name] || [0, 0]), litCities[name]]
+    })).filter(d => d.value[0] > 0);
+
+    mapChart.setOption({
+      series: [{
+        data: scatterData
+      }]
+    });
+  }
+
+  function loadMap() {
+    fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+      .then(res => res.json())
+      .then(geoJson => {
+        echarts.registerMap('china', geoJson);
+        initMap();
+      })
+      .catch(err => {
+        document.getElementById('map').innerHTML = 
+          '<div class="map-loading">地图加载失败，请检查网络连接</div>';
+      });
+  }
+
+  function getLocation() {
+    const btn = document.getElementById('getLocationBtn');
+    const text = document.getElementById('locationText');
+    
+    btn.disabled = true;
+    text.textContent = '正在获取位置...';
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const allCities = Object.entries(cityData).flatMap(([prov, cities]) => 
+            cities.map(c => ({ city: c, province: prov }))
+          );
+          const randomCity = allCities[Math.floor(Math.random() * Math.min(50, allCities.length))];
+          currentCity = randomCity.city;
+          currentProvince = randomCity.province;
+          text.textContent = `${currentProvince} · ${currentCity}`;
+          btn.disabled = false;
+          enableLightUpBtn();
+        },
+        () => {
+          const allCities = Object.entries(cityData).flatMap(([prov, cities]) => 
+            cities.map(c => ({ city: c, province: prov }))
+          );
+          const randomCity = allCities[Math.floor(Math.random() * Math.min(50, allCities.length))];
+          currentCity = randomCity.city;
+          currentProvince = randomCity.province;
+          text.textContent = `${currentProvince} · ${currentCity}`;
+          btn.disabled = false;
+          enableLightUpBtn();
+        },
+        { timeout: 8000 }
+      );
+    } else {
+      text.textContent = '点击选择城市';
+    }
+  }
+
+  function enableLightUpBtn() {
+    const btn = document.getElementById('lightUpBtn');
+    const text = document.getElementById('actionText');
+    btn.disabled = false;
+    btn.classList.add('active');
+    text.textContent = `✨ 助力点亮 ${currentCity}`;
+  }
+
+  function lightUp() {
+    if (!currentCity) {
+      openCityPicker();
+      return;
+    }
+
+    const btn = document.getElementById('lightUpBtn');
+    const text = document.getElementById('actionText');
+    
+    btn.disabled = true;
+    text.textContent = '✨ 点亮中...';
+
+    setTimeout(() => {
+      litCities[currentCity] = (litCities[currentCity] || 0) + 1;
+      totalLights++;
+
+      document.getElementById('lightCount').textContent = totalLights;
+      document.getElementById('provinceCount').textContent = Object.keys(litCities).length;
+
+      updateMap();
+
+      text.textContent = '✓ 点亮成功！';
+      btn.classList.add('success');
+
+      setTimeout(() => {
+        text.textContent = `✨ 再次点亮 ${currentCity}`;
+        btn.disabled = false;
+        btn.classList.remove('success');
+      }, 1500);
+    }, 600);
+  }
+
+  // Initialize
+  loadMap();
+</script>
+
+</body>
+</html>
